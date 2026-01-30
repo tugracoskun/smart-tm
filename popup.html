@@ -187,6 +187,31 @@
               <span class="checkmark"></span>
               <span>🇵🇹 Primeira Liga</span>
             </label>
+            <label class="checkbox-item">
+              <input type="checkbox" data-league="belgian-pro">
+              <span class="checkmark"></span>
+              <span>🇧🇪 Jupiler Pro League</span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" data-league="austrian-bundesliga">
+              <span class="checkmark"></span>
+              <span>🇦🇹 Bundesliga (Avusturya)</span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" data-league="russian-premier">
+              <span class="checkmark"></span>
+              <span>🇷🇺 Premier Liga</span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" data-league="saudi-pro">
+              <span class="checkmark"></span>
+              <span>🇸🇦 Saudi Pro League</span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" data-league="mls">
+              <span class="checkmark"></span>
+              <span>🇺🇸 MLS</span>
+            </label>
           </div>
         </div>
       </section>
@@ -251,6 +276,23 @@
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
               JSON İndir
+            </button>
+          </div>
+
+          <div class="divider"></div>
+
+          <h3>İçe Aktarma</h3>
+          <p class="helper-text">Daha önce yedeklediğiniz JSON dosyasını yükleyerek verilerinizi geri yükleyin.</p>
+
+          <div class="import-section">
+            <input type="file" id="import-file" accept=".json" style="display: none;">
+            <button class="btn btn-accent" id="import-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              JSON Dosyası Yükle
             </button>
           </div>
 

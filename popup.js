@@ -306,6 +306,30 @@ function setupEventListeners() {
       location.reload();
     }
   });
+
+  // Import button
+  document.getElementById('import-btn')?.addEventListener('click', () => {
+    document.getElementById('import-file')?.click();
+  });
+
+  // Import file handler
+  document.getElementById('import-file')?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const result = await ExportManager.importFromJSON(file);
+      if (result.success) {
+        alert(result.message);
+        location.reload();
+      }
+    } catch (error) {
+      alert(error.message || 'İçe aktarma hatası!');
+    }
+
+    // Reset file input
+    e.target.value = '';
+  });
 }
 
 /**

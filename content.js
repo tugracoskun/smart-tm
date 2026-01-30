@@ -347,6 +347,26 @@
         const table = document.querySelector(CONFIG.selectors.transferTable);
         if (!table || document.querySelector('.smarttm-filter-panel')) return;
 
+        // Collect unique positions and nationalities from the page
+        const positions = new Set();
+        const nationalities = new Set();
+
+        document.querySelectorAll(CONFIG.selectors.transferRow).forEach(row => {
+            const playerData = Utils.extractPlayerData(row);
+            if (playerData) {
+                if (playerData.position) positions.add(playerData.position);
+                if (playerData.nationality) nationalities.add(playerData.nationality);
+            }
+        });
+
+        const positionOptions = Array.from(positions).sort().map(p =>
+            `<option value="${p}">${p}</option>`
+        ).join('');
+
+        const nationalityOptions = Array.from(nationalities).sort().map(n =>
+            `<option value="${n}">${n}</option>`
+        ).join('');
+
         const panel = Utils.createElement('div', { className: 'smarttm-filter-panel' });
         panel.innerHTML = `
       <div class="smarttm-filter-header">
@@ -355,6 +375,7 @@
             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
           </svg>
           <span>Smart Filters</span>
+          <span class="smarttm-stats" id="smarttm-stats"></span>
         </div>
         <button class="smarttm-filter-toggle">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -381,11 +402,35 @@
             </div>
           </div>
           <div class="smarttm-filter-group">
+            <label>Pozisyon</label>
+            <select id="smarttm-position" class="smarttm-select">
+              <option value="">Tümü</option>
+              ${positionOptions}
+            </select>
+          </div>
+        </div>
+        <div class="smarttm-filter-row">
+          <div class="smarttm-filter-group">
+            <label>Milliyet</label>
+            <select id="smarttm-nationality" class="smarttm-select">
+              <option value="">Tümü</option>
+              ${nationalityOptions}
+            </select>
+          </div>
+          <div class="smarttm-filter-group">
             <label>Transfer Tipi</label>
             <div class="smarttm-filter-checkboxes">
               <label><input type="checkbox" id="smarttm-type-loan" checked> Kiralık</label>
               <label><input type="checkbox" id="smarttm-type-permanent" checked> Bonservisli</label>
               <label><input type="checkbox" id="smarttm-type-free" checked> Bedelsiz</label>
+            </div>
+          </div>
+          <div class="smarttm-filter-group">
+            <label>Hızlı Filtreler</label>
+            <div class="smarttm-quick-filters">
+              <button class="smarttm-quick-btn" data-filter="young">U21</button>
+              <button class="smarttm-quick-btn" data-filter="talent">Yetenek (U23)</button>
+              <button class="smarttm-quick-btn" data-filter="free-agents">Bedelsiz</button>
             </div>
           </div>
         </div>
@@ -413,10 +458,27 @@
           </button>
         </div>
       </div>
+      <div class="smarttm-legend">
+        <div class="smarttm-legend-item">
+          <span class="smarttm-legend-color loan"></span>
+          <span>Kiralık</span>
+        </div>
+        <div class="smarttm-legend-item">
+          <span class="smarttm-legend-color permanent"></span>
+          <span>Bonservisli</span>
+        </div>
+        <div class="smarttm-legend-item">
+          <span class="smarttm-legend-color free"></span>
+          <span>Bedelsiz</span>
+        </div>
+      </div>
     `;
 
         // Insert before table
         table.parentNode.insertBefore(panel, table);
+
+        // Update stats
+        updateFilterStats();
 
         // Event listeners
         panel.querySelector('.smarttm-filter-toggle').addEventListener('click', () => {
@@ -426,6 +488,72 @@
         panel.querySelector('#smarttm-filter-apply').addEventListener('click', applyFilters);
         panel.querySelector('#smarttm-filter-reset').addEventListener('click', resetFilters);
         panel.querySelector('#smarttm-filter-save').addEventListener('click', saveCurrentFilter);
+
+        // Quick filter buttons
+        panel.querySelectorAll('.smarttm-quick-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const filter = btn.dataset.filter;
+                applyQuickFilter(filter);
+            });
+        });
+
+        // Real-time filtering on input change
+        const inputs = panel.querySelectorAll('input, select');
+        inputs.forEach(input => {
+            input.addEventListener('change', applyFilters);
+        });
+    }
+
+    /**
+     * Update filter statistics display
+     */
+    function updateFilterStats() {
+        const statsEl = document.getElementById('smarttm-stats');
+        if (!statsEl) return;
+
+        const tables = document.querySelectorAll(CONFIG.selectors.transferTable);
+        let total = 0;
+        let visible = 0;
+
+        tables.forEach(table => {
+            const rows = table.querySelectorAll(CONFIG.selectors.transferRow);
+            rows.forEach(row => {
+                total++;
+                if (row.style.display !== 'none') visible++;
+            });
+        });
+
+        if (total === visible) {
+            statsEl.textContent = `(${total} transfer)`;
+        } else {
+            statsEl.textContent = `(${visible}/${total} gösteriliyor)`;
+        }
+    }
+
+    /**
+     * Apply quick filter presets
+     */
+    function applyQuickFilter(filterType) {
+        // Reset first
+        resetFilters();
+
+        switch (filterType) {
+            case 'young':
+                document.getElementById('smarttm-age-min').value = '15';
+                document.getElementById('smarttm-age-max').value = '21';
+                break;
+            case 'talent':
+                document.getElementById('smarttm-age-min').value = '15';
+                document.getElementById('smarttm-age-max').value = '23';
+                break;
+            case 'free-agents':
+                document.getElementById('smarttm-type-loan').checked = false;
+                document.getElementById('smarttm-type-permanent').checked = false;
+                document.getElementById('smarttm-type-free').checked = true;
+                break;
+        }
+
+        applyFilters();
     }
 
     /**
@@ -440,6 +568,10 @@
         const showLoan = document.getElementById('smarttm-type-loan')?.checked ?? true;
         const showPermanent = document.getElementById('smarttm-type-permanent')?.checked ?? true;
         const showFree = document.getElementById('smarttm-type-free')?.checked ?? true;
+
+        // New filters
+        const selectedPosition = document.getElementById('smarttm-position')?.value || '';
+        const selectedNationality = document.getElementById('smarttm-nationality')?.value || '';
 
         const tables = document.querySelectorAll(CONFIG.selectors.transferTable);
 
@@ -464,6 +596,16 @@
                     visible = false;
                 }
 
+                // Position filter
+                if (selectedPosition && playerData.position !== selectedPosition) {
+                    visible = false;
+                }
+
+                // Nationality filter
+                if (selectedNationality && playerData.nationality !== selectedNationality) {
+                    visible = false;
+                }
+
                 // Transfer type filter
                 const feeText = playerData.fee || '';
                 const transferType = Utils.getTransferType(feeText);
@@ -475,6 +617,9 @@
                 row.style.display = visible ? '' : 'none';
             });
         });
+
+        // Update stats after filtering
+        updateFilterStats();
     }
 
     /**
@@ -489,12 +634,21 @@
         document.getElementById('smarttm-type-permanent').checked = true;
         document.getElementById('smarttm-type-free').checked = true;
 
+        // Reset new filters
+        const positionSelect = document.getElementById('smarttm-position');
+        const nationalitySelect = document.getElementById('smarttm-nationality');
+        if (positionSelect) positionSelect.value = '';
+        if (nationalitySelect) nationalitySelect.value = '';
+
         // Show all rows
         const tables = document.querySelectorAll(CONFIG.selectors.transferTable);
         tables.forEach(table => {
             const rows = table.querySelectorAll(CONFIG.selectors.transferRow);
             rows.forEach(row => row.style.display = '');
         });
+
+        // Update stats
+        updateFilterStats();
     }
 
     /**
