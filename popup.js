@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Initialize
   await initTabs();
   await loadWatchlist();
+  await loadSearchPanel();
   await loadFilters();
   await loadSettings();
   await loadNotificationSettings();
@@ -105,6 +106,109 @@ async function loadWatchlist() {
       loadWatchlist();
     });
   });
+}
+
+/**
+ * Load and initialize the global search panel
+ */
+async function loadSearchPanel() {
+  const cacheOptions = await StorageManager.getCacheFilterOptions();
+
+  // Update stats
+  document.getElementById('cache-count').textContent = cacheOptions.totalTransfers;
+  document.getElementById('total-cached').textContent = cacheOptions.totalTransfers;
+  document.getElementById('pages-scanned').textContent = cacheOptions.pagesScanned;
+
+  // Populate position dropdown
+  const positionSelect = document.getElementById('search-position');
+  if (positionSelect) {
+    positionSelect.innerHTML = '<option value="">Tümü</option>' +
+      cacheOptions.positions.map(p => `<option value="${p}">${p}</option>`).join('');
+  }
+
+  // Populate nationality dropdown
+  const nationalitySelect = document.getElementById('search-nationality');
+  if (nationalitySelect) {
+    nationalitySelect.innerHTML = '<option value="">Tümü</option>' +
+      cacheOptions.nationalities.map(n => `<option value="${n}">${n}</option>`).join('');
+  }
+
+  // If there are cached transfers, show initial results
+  if (cacheOptions.totalTransfers > 0) {
+    await performSearch();
+  }
+}
+
+/**
+ * Perform search on cached transfers
+ */
+async function performSearch() {
+  const filters = {
+    position: document.getElementById('search-position')?.value || '',
+    nationality: document.getElementById('search-nationality')?.value || '',
+    ageMin: parseInt(document.getElementById('search-age-min')?.value) || null,
+    ageMax: parseInt(document.getElementById('search-age-max')?.value) || null
+  };
+
+  // Handle sorting
+  const sortValue = document.getElementById('search-sort')?.value || '';
+  if (sortValue) {
+    const [sortBy, sortDirection] = sortValue.split('-');
+    filters.sortBy = sortBy;
+    filters.sortDirection = sortDirection;
+  }
+
+  const results = await StorageManager.queryCachedTransfers(filters);
+  renderSearchResults(results);
+}
+
+/**
+ * Render search results
+ */
+function renderSearchResults(transfers) {
+  const container = document.getElementById('search-results');
+
+  if (transfers.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.35-4.35" />
+        </svg>
+        <p>Sonuç bulunamadı</p>
+        <span>Filtreleri değiştirerek tekrar deneyin.</span>
+      </div>
+    `;
+    return;
+  }
+
+  // Limit to first 50 results
+  const displayTransfers = transfers.slice(0, 50);
+
+  container.innerHTML = `
+    <div class="results-count">${transfers.length} sonuç bulundu ${transfers.length > 50 ? '(ilk 50 gösteriliyor)' : ''}</div>
+    <div class="search-results-list">
+      ${displayTransfers.map(t => `
+        <div class="result-item" data-player-id="${t.id}">
+          <div class="result-info">
+            <span class="result-name">${t.name || 'İsimsiz'}</span>
+            <span class="result-details">
+              ${t.position || ''} ${t.age ? `• ${t.age} yaş` : ''} ${t.nationality ? `• ${t.nationality}` : ''}
+            </span>
+          </div>
+          <div class="result-actions">
+            <a href="${t.profileUrl}" target="_blank" class="btn-icon" title="Profile Git">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                <polyline points="15 3 21 3 21 9"/>
+                <line x1="10" y1="14" x2="21" y2="3"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
 }
 
 /**
@@ -278,6 +382,44 @@ function setupEventListeners() {
 
       await StorageManager.setLeagueRadar(selectedLeagues);
     });
+  });
+
+  // Global Search event listeners
+  document.getElementById('search-apply')?.addEventListener('click', performSearch);
+
+  // Sync Data Button
+  document.getElementById('sync-data-btn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('sync-data-btn');
+    btn.classList.add('loading');
+    btn.style.opacity = '0.5';
+
+    chrome.runtime.sendMessage({ action: 'syncTransfers' }, async (response) => {
+      btn.classList.remove('loading');
+      btn.style.opacity = '1';
+
+      if (response && response.success) {
+        alert(`${response.count} yeni transfer cache'e eklendi!`);
+        await loadSearchPanel();
+      } else {
+        alert(response?.message || 'Senkronizasyon başarısız. Lütfen bir Transfermarkt sekmesinin açık olduğundan emin olun.');
+      }
+    });
+  });
+
+  document.getElementById('search-reset')?.addEventListener('click', async () => {
+    document.getElementById('search-position').value = '';
+    document.getElementById('search-nationality').value = '';
+    document.getElementById('search-age-min').value = '';
+    document.getElementById('search-age-max').value = '';
+    document.getElementById('search-sort').value = '';
+    await performSearch();
+  });
+
+  document.getElementById('clear-cache')?.addEventListener('click', async () => {
+    if (confirm('Tüm önbelleğe alınmış transferler silinecek. Emin misiniz?')) {
+      await StorageManager.clearTransferCache();
+      await loadSearchPanel();
+    }
   });
 
   // Export buttons - use ExportManager for proper exports

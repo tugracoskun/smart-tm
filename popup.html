@@ -37,6 +37,13 @@
         </svg>
         Watchlist
       </button>
+      <button class="tab" data-tab="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.35-4.35" />
+        </svg>
+        Arama
+      </button>
       <button class="tab" data-tab="filters">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
@@ -85,6 +92,88 @@
             <p>Henüz takip edilen oyuncu yok</p>
             <span>Transfermarkt'ta bir oyuncunun yanındaki ⭐ ikonuna tıklayarak watchlist'e ekleyebilirsiniz.</span>
           </div>
+        </div>
+      </section>
+
+      <!-- Global Search Panel -->
+      <section class="panel" id="search-panel">
+        <div class="panel-header">
+          <h2>Tüm Transferlerde Ara</h2>
+          <div class="panel-actions">
+            <button class="btn-icon" id="sync-data-btn" title="Son Transferleri Çek">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+              </svg>
+            </button>
+            <span class="badge" id="cache-count">0</span>
+          </div>
+        </div>
+
+        <div class="cache-stats" id="cache-stats">
+          <span class="stat-item">📊 <span id="total-cached">0</span> transfer kaydedildi</span>
+          <span class="stat-item">📄 <span id="pages-scanned">0</span> sayfa tarandı</span>
+        </div>
+
+        <div class="search-filters">
+          <div class="filter-row">
+            <div class="filter-group">
+              <label>Pozisyon</label>
+              <select id="search-position" class="form-select">
+                <option value="">Tümü</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>Milliyet</label>
+              <select id="search-nationality" class="form-select">
+                <option value="">Tümü</option>
+              </select>
+            </div>
+          </div>
+          <div class="filter-row">
+            <div class="filter-group">
+              <label>Yaş Aralığı</label>
+              <div class="range-inputs">
+                <input type="number" id="search-age-min" placeholder="Min" min="15" max="45">
+                <span>-</span>
+                <input type="number" id="search-age-max" placeholder="Max" min="15" max="45">
+              </div>
+            </div>
+            <div class="filter-group">
+              <label>Sırala</label>
+              <select id="search-sort" class="form-select">
+                <option value="">Varsayılan</option>
+                <option value="name-asc">İsim (A-Z)</option>
+                <option value="name-desc">İsim (Z-A)</option>
+                <option value="age-asc">Yaş (Küçük-Büyük)</option>
+                <option value="age-desc">Yaş (Büyük-Küçük)</option>
+              </select>
+            </div>
+          </div>
+          <div class="filter-actions">
+            <button class="btn btn-secondary" id="search-reset">Sıfırla</button>
+            <button class="btn btn-primary" id="search-apply">Ara</button>
+          </div>
+        </div>
+
+        <div class="search-results" id="search-results">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+            <p>Transfermarkt sayfalarını gezin</p>
+            <span>Gezdiğiniz sayfalardan transferler otomatik olarak kaydedilir ve burada aranabilir hale gelir.</span>
+          </div>
+        </div>
+
+        <div class="cache-actions">
+          <button class="btn btn-danger btn-sm" id="clear-cache">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+            Cache'i Temizle
+          </button>
         </div>
       </section>
 

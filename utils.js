@@ -196,78 +196,110 @@ const Utils = {
 
     /**
      * Generate unique ID for a transfer row
-     * @param {Element} row - Table row element
-     * @returns {string}
      */
     generateTransferId(row) {
         const playerLink = row.querySelector('a[href*="/profil/spieler/"]');
-        const dateCell = row.querySelector('.zentriert');
-
         if (playerLink) {
             const idMatch = playerLink.href.match(/spieler\/(\d+)/);
-            if (idMatch) {
-                const date = dateCell ? dateCell.textContent.trim() : 'unknown';
-                return `transfer_${idMatch[1]}_${date.replace(/\./g, '')}`;
-            }
+            if (idMatch) return idMatch[1];
         }
-
-        return `transfer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        return `temp_${Math.random().toString(36).substr(2, 9)}`;
     },
 
     /**
      * Extract player data from a transfer row
-     * @param {Element} row - Table row element
-     * @returns {Object}
      */
     extractPlayerData(row) {
+        // En kritik nokta: Oyuncu linkini doğru yakalamak
+        // Transfermarkt'ta mevki bazen link olabilir ama oyuncu linki her zaman /profil/spieler/ içerir
         const playerLink = row.querySelector('a[href*="/profil/spieler/"]');
-        const playerImg = row.querySelector('.bilderrahmen-fixed, img.bilderrahmen');
-        const cells = row.querySelectorAll('td');
-
         if (!playerLink) return null;
 
+        // İSİM ÇAKTIRMASI (Root Fix): 
+        // 1. Önce linkin 'title' özniteliğine bak (En temiz, pozisyon içermeyen isim buradadır)
+        // 2. Eğer title yoksa linkin içindeki <b> veya <strong> etiketine bak
+        // 3. Hiçbiri yoksa URL slug'ından temizle
+        let playerName = playerLink.getAttribute('title') || '';
+
+        if (!playerName || playerName === 'Profil') {
+            const boldText = playerLink.querySelector('b, strong');
+            if (boldText) {
+                playerName = boldText.textContent.trim();
+            } else {
+                // URL'den çek: /isim/profil/spieler/123
+                const parts = playerLink.href.split('/');
+                const slug = parts[parts.indexOf('profil') - 1];
+                playerName = slug.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+            }
+        }
+
+        // Mevkiyi asla isimle karıştırma: Mevki .inline-table'ın 2. satırındadır
+        const position = this.extractPosition(row);
+
+        const playerImg = row.querySelector('.bilderrahmen-fixed, img.bilderrahmen');
+        const cells = row.querySelectorAll('td');
         const idMatch = playerLink.href.match(/spieler\/(\d+)/);
-        const slugMatch = playerLink.href.match(/transfermarkt\.[^/]+\/([^/]+)\/profil/);
 
         return {
             id: idMatch ? idMatch[1] : null,
-            slug: slugMatch ? slugMatch[1] : null,
-            name: playerLink.textContent.trim(),
+            name: playerName.trim(),
             profileUrl: playerLink.href,
             imageUrl: playerImg ? playerImg.src : null,
-            age: cells[2] ? this.parseAge(cells[2].textContent) : null,
+            age: this.extractAge(row),
             nationality: this.extractNationality(row),
-            position: this.extractPosition(row),
+            position: position,
             fromClub: this.extractClub(row, 'from'),
             toClub: this.extractClub(row, 'to'),
-            marketValue: cells[cells.length - 2] ? cells[cells.length - 2].textContent.trim() : null,
-            fee: cells[cells.length - 1] ? cells[cells.length - 1].textContent.trim() : null
+            marketValue: cells.length > 2 ? cells[cells.length - 2]?.textContent.trim() : null,
+            fee: cells.length > 1 ? cells[cells.length - 1]?.textContent.trim() : null
         };
     },
 
     /**
-     * Extract nationality from row
-     * @param {Element} row - Table row element
-     * @returns {string|null}
+     * Yaş bilgisini hücrelerden bulur
      */
-    extractNationality(row) {
-        const flagImg = row.querySelector('.flaggenrahmen');
-        if (flagImg) {
-            return flagImg.title || flagImg.alt || null;
+    extractAge(row) {
+        const cells = row.querySelectorAll('td');
+        for (const cell of cells) {
+            const text = cell.textContent.trim();
+            if (/^\d{2}$/.test(text) && parseInt(text) >= 14 && parseInt(text) <= 50) {
+                return parseInt(text);
+            }
         }
         return null;
     },
 
     /**
-     * Extract position from row
-     * @param {Element} row - Table row element
-     * @returns {string|null}
+     * Uyruk bilgisini çeker
+     */
+    extractNationality(row) {
+        const flagImg = row.querySelector('.flaggenrahmen');
+        return flagImg ? (flagImg.title || flagImg.alt) : null;
+    },
+
+    /**
+     * Mevki bilgisini çeker (Okla gösterilen kısım)
      */
     extractPosition(row) {
-        const positionCell = row.querySelector('.inline-table tr:last-child td');
-        if (positionCell) {
-            return positionCell.textContent.trim();
+        // Görseldeki okların gösterdiği yer: .inline-table'ın ikinci satırı
+        const inlineTable = row.querySelector('.inline-table');
+        if (inlineTable) {
+            const trs = inlineTable.querySelectorAll('tr');
+            // Genelde [0] isim, [1] mevkidir
+            if (trs.length >= 2) {
+                const posStr = trs[1].textContent.trim();
+                // Eğer çok uzunsa muhtemelen başka bir şeydir, kısa tut
+                return posStr.length < 40 ? posStr : posStr.substring(0, 40);
+            }
         }
+
+        // Bazı sayfalarda td sınıfı 'posrela'dır
+        const posCell = row.querySelector('.posrela');
+        if (posCell) {
+            const trs = posCell.querySelectorAll('tr');
+            if (trs.length >= 2) return trs[1].textContent.trim();
+        }
+
         return null;
     },
 

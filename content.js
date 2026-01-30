@@ -35,6 +35,16 @@
         if (isInitialized) return;
 
         try {
+            // Message listener for background requests
+            chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+                if (request.action === 'scanPage') {
+                    cachePageTransfers().then(count => {
+                        sendResponse({ success: true, count: count });
+                    });
+                    return true;
+                }
+            });
+
             // Load data from storage
             settings = await StorageManager.getSettings();
             watchlist = await StorageManager.getWatchlist();
@@ -46,6 +56,14 @@
             // Check if we're on a transfer page
             if (isTransferPage()) {
                 console.log('[Smart-TM] Initializing on transfer page...');
+
+                // Cache transfers from this page initially
+                await cachePageTransfers();
+
+                // OTOMATİK TARAMA: Her 5 saniyede bir sayfayı kontrol et (Yeni transferler için)
+                setInterval(async () => {
+                    await cachePageTransfers();
+                }, 5000);
 
                 // Apply enhancements
                 if (settings.transferColors) applyTransferColors();
@@ -95,6 +113,36 @@
         console.log('[Smart-TM] URL check:', isTransfer, 'Player links:', hasPlayerLinks, 'Tables:', hasTables);
 
         return isTransfer || (hasPlayerLinks && hasTables);
+    }
+
+    // ===== TRANSFER CACHE ===== //
+
+    /**
+     * Collect all transfers from current page and cache them for global search
+     */
+    async function cachePageTransfers() {
+        const transfers = [];
+        const tables = document.querySelectorAll(CONFIG.selectors.transferTable);
+
+        tables.forEach(table => {
+            const rows = table.querySelectorAll(CONFIG.selectors.transferRow);
+
+            rows.forEach(row => {
+                const playerData = Utils.extractPlayerData(row);
+                // Sadece geçerli ismi ve mevkisi olanları cache'le
+                if (playerData && playerData.id && playerData.name && playerData.position) {
+                    // Add timestamp and source page
+                    playerData.cachedAt = new Date().toISOString();
+                    playerData.sourcePage = window.location.href;
+                    transfers.push(playerData);
+                }
+            });
+        });
+
+        if (transfers.length > 0) {
+            await StorageManager.addToTransferCache(transfers, window.location.href);
+            console.log(`[Smart-TM] Cached ${transfers.length} transfers from this page`);
+        }
     }
 
     // ===== TRANSFER COLORS ===== //

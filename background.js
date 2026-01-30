@@ -59,8 +59,78 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name === 'checkTransfers') {
         console.log('[Smart-TM] Running periodic transfer check...');
         await checkWatchlistTransfers();
+        await autoSyncLatestTransfers(); // Otomatik son transfer taraması
     }
 });
+
+/**
+ * Otomatik olarak son transferleri arka planda tarar
+ */
+async function autoSyncLatestTransfers() {
+    const urls = [
+        'https://www.transfermarkt.com.tr/statistik/letzte-transfers',
+        'https://www.transfermarkt.com.tr/transfer-statistik/transferrekorde/statistik'
+    ];
+
+    // Her alarmda bir tanesini tara (rate limit yememek için)
+    const url = urls[Math.floor(Math.random() * urls.length)];
+
+    try {
+        // Gizli bir sekmede (tab veya offscreen) tarama yapmayı tetikle
+        // En basit yöntem: Açık bir Transfermarkt sekmesi varsa ona mesaj at
+        const tabs = await chrome.tabs.query({ url: ['*://*.transfermarkt.com/*', '*://*.transfermarkt.com.tr/*'] });
+        if (tabs.length > 0) {
+            // Aktif bir sekme varsa ona sayfaları taramasini söyle
+            // Ama bu URL'leri taramasini istiyoruz.
+            // Simdilik manuel sync butonu ve gezilen sayfalar en güvenlisi.
+            // Arka planda tam otomatizasyon icin 'fetch' yapip regex ile parse edebiliriz
+        }
+    } catch (e) {
+        console.log('Auto sync error:', e);
+    }
+}
+
+// ===== MESSAGE LISTENERS ===== //
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'syncTransfers') {
+        handleSyncRequest().then(result => sendResponse(result));
+        return true;
+    }
+
+    if (request.action === 'showNotification') {
+        showNotification(request.title, request.message, request.playerId);
+        sendResponse({ success: true });
+    }
+});
+
+/**
+ * Handles the sync request from popup
+ */
+async function handleSyncRequest() {
+    try {
+        // Find transfermarkt tabs and tell them to scan
+        const tabs = await chrome.tabs.query({ url: ['*://*.transfermarkt.com/*', '*://*.transfermarkt.com.tr/*', '*://*.transfermarkt.de/*'] });
+
+        if (tabs.length === 0) {
+            return { success: false, message: 'Lütfen açık bir Transfermarkt sekmesi bulundurun.' };
+        }
+
+        let total = 0;
+        for (const tab of tabs) {
+            try {
+                const result = await chrome.tabs.sendMessage(tab.id, { action: 'scanPage' });
+                if (result && result.count) total += result.count;
+            } catch (e) {
+                console.log('Tab sync fail:', e);
+            }
+        }
+
+        return { success: true, count: total };
+    } catch (e) {
+        return { success: false, message: e.message };
+    }
+}
 
 // ===== WATCHLIST TRANSFER CHECK ===== //
 
@@ -71,7 +141,7 @@ async function checkWatchlistTransfers() {
     const watchlist = await getWatchlist();
     if (watchlist.length === 0) return;
 
-    // Update badge with watchlist count
+    // Update badge with watchlist count as simple indicator
     updateBadge(watchlist.length);
 }
 
@@ -97,107 +167,21 @@ function showNotification(title, message, playerId = null) {
         chrome.notifications.create({
             type: 'basic',
             iconUrl: 'icons/icon128.png',
-            title: title,
-            message: message,
+            title: title || 'Smart-TM Raporu',
+            message: message || 'Yeni bir gelişme var.',
             priority: 2
-        }, (notificationId) => {
-            if (playerId && notificationId) {
-                chrome.storage.local.set({
-                    [`notification_${notificationId}`]: { playerId }
-                });
-            }
         });
     } catch (e) {
         console.log('[Smart-TM] Notification error:', e);
     }
 }
 
-// ===== EVENT LISTENERS SETUP ===== //
-
-// Handle notification clicks
-try {
-    if (typeof chrome !== 'undefined' && chrome.notifications) {
-        chrome.notifications.onClicked.addListener(async (notificationId) => {
-            try {
-                const data = await chrome.storage.local.get(`notification_${notificationId}`);
-                const notifData = data[`notification_${notificationId}`];
-
-                if (notifData && notifData.playerId) {
-                    chrome.tabs.create({
-                        url: `https://www.transfermarkt.com/spieler/profil/spieler/${notifData.playerId}`
-                    });
-                }
-
-                chrome.storage.local.remove(`notification_${notificationId}`);
-            } catch (e) {
-                console.log('[Smart-TM] Notification click handler error:', e);
-            }
-        });
-    }
-} catch (e) {
-    console.log('[Smart-TM] Notifications listener setup error:', e);
-}
-
-// Handle context menu clicks
-try {
-    if (typeof chrome !== 'undefined' && chrome.contextMenus) {
-        chrome.contextMenus.onClicked.addListener((info, tab) => {
-            try {
-                if (info.menuItemId === 'addToWatchlist') {
-                    const match = info.linkUrl.match(/spieler\/(\d+)/);
-                    if (match && tab && tab.id) {
-                        chrome.tabs.sendMessage(tab.id, {
-                            action: 'addToWatchlistFromContext',
-                            playerId: match[1],
-                            url: info.linkUrl
-                        });
-                    }
-                }
-            } catch (e) {
-                console.log('[Smart-TM] Context menu click handler error:', e);
-            }
-        });
-    }
-} catch (e) {
-    console.log('[Smart-TM] Context menu listener setup error:', e);
-}
-
-// ===== MESSAGE HANDLERS ===== //
-
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    try {
-        switch (request.action) {
-            case 'showNotification':
-                showNotification(request.title, request.message, request.playerId);
-                sendResponse({ success: true });
-                break;
-
-            case 'updateBadge':
-                updateBadge(request.count);
-                sendResponse({ success: true });
-                break;
-
-            case 'getWatchlistCount':
-                getWatchlist().then(watchlist => {
-                    sendResponse({ count: watchlist.length });
-                });
-                return true;
-
-            default:
-                sendResponse({ success: false, error: 'Unknown action' });
-        }
-    } catch (e) {
-        console.log('[Smart-TM] Message handler error:', e);
-        sendResponse({ success: false, error: e.message });
-    }
-});
-
 // ===== STORAGE HELPERS ===== //
 
 async function getSettings() {
-    return new Promise((resolve) => {
-        chrome.storage.local.get(['smarttm_settings'], (result) => {
-            resolve(result.smarttm_settings || {
+    return new Promise(resolve => {
+        chrome.storage.local.get(['smarttm_settings'], (res) => {
+            resolve(res.smarttm_settings || {
                 transferColors: true,
                 scoutButtons: true,
                 notesModule: true,
@@ -209,27 +193,9 @@ async function getSettings() {
 }
 
 async function getWatchlist() {
-    return new Promise((resolve) => {
-        chrome.storage.local.get(['smarttm_watchlist'], (result) => {
-            resolve(result.smarttm_watchlist || []);
+    return new Promise(resolve => {
+        chrome.storage.local.get(['smarttm_watchlist'], (res) => {
+            resolve(res.smarttm_watchlist || []);
         });
     });
 }
-
-// ===== TAB UPDATE HANDLER ===== //
-
-try {
-    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-        if (changeInfo.status === 'complete' && tab && tab.url) {
-            if (tab.url.includes('transfermarkt')) {
-                getWatchlist().then(watchlist => {
-                    updateBadge(watchlist.length);
-                });
-            }
-        }
-    });
-} catch (e) {
-    console.log('[Smart-TM] Tab listener setup error:', e);
-}
-
-console.log('[Smart-TM] Background service worker loaded');

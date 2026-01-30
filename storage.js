@@ -11,7 +11,8 @@ const StorageManager = {
     NOTES: 'smarttm_notes',
     SETTINGS: 'smarttm_settings',
     LEAGUE_RADAR: 'smarttm_league_radar',
-    NOTIFICATIONS: 'smarttm_notifications'
+    NOTIFICATIONS: 'smarttm_notifications',
+    TRANSFER_CACHE: 'smarttm_transfer_cache'
   },
 
   // Default settings
@@ -88,7 +89,7 @@ const StorageManager = {
   async addToWatchlist(player) {
     const watchlist = await this.getWatchlist();
     const exists = watchlist.some(p => p.id === player.id);
-    
+
     if (!exists) {
       player.addedAt = new Date().toISOString();
       watchlist.push(player);
@@ -161,7 +162,7 @@ const StorageManager = {
   async updateFilter(filterId, updates) {
     const filters = await this.getFilters();
     const index = filters.findIndex(f => f.id === filterId);
-    
+
     if (index !== -1) {
       filters[index] = { ...filters[index], ...updates };
       await this.set(this.KEYS.FILTERS, filters);
@@ -257,6 +258,140 @@ const StorageManager = {
     await this.set(this.KEYS.LEAGUE_RADAR, leagues);
   },
 
+  // ===== TRANSFER CACHE METHODS =====
+
+  /**
+   * Get all cached transfers
+   * @returns {Promise<Object>}
+   */
+  async getTransferCache() {
+    const cache = await this.get(this.KEYS.TRANSFER_CACHE);
+    return cache || { transfers: [], lastUpdated: null, pageUrls: [] };
+  },
+
+  /**
+   * Add transfers to cache (merges with existing)
+   * @param {Array} transfers - Array of transfer objects
+   * @param {string} pageUrl - URL of the page where transfers were collected
+   * @returns {Promise<void>}
+   */
+  async addToTransferCache(transfers, pageUrl) {
+    const cache = await this.getTransferCache();
+
+    // Add page URL if not already tracked
+    if (!cache.pageUrls.includes(pageUrl)) {
+      cache.pageUrls.push(pageUrl);
+    }
+
+    // Merge transfers: Map based on ID to keep the most complete/recent data
+    const transferMap = new Map();
+    cache.transfers.forEach(t => transferMap.set(t.id, t));
+
+    transfers.forEach(t => {
+      if (t.id) {
+        // Eğer zaten varsa ama gelen veri daha doluysa (örn: resim veya uyruk eklenmişse) güncelle
+        const existing = transferMap.get(t.id);
+        if (!existing || (t.name && t.position)) {
+          transferMap.set(t.id, { ...existing, ...t });
+        }
+      }
+    });
+
+    cache.transfers = Array.from(transferMap.values());
+    cache.lastUpdated = new Date().toISOString();
+
+    await this.set(this.KEYS.TRANSFER_CACHE, cache);
+  },
+
+  /**
+   * Query cached transfers with filters
+   * @param {Object} filters - Filter criteria
+   * @returns {Promise<Array>}
+   */
+  async queryCachedTransfers(filters = {}) {
+    const cache = await this.getTransferCache();
+    let results = [...cache.transfers];
+
+    // Age filter
+    if (filters.ageMin) {
+      results = results.filter(t => t.age && t.age >= filters.ageMin);
+    }
+    if (filters.ageMax) {
+      results = results.filter(t => t.age && t.age <= filters.ageMax);
+    }
+
+    // Position filter
+    if (filters.position) {
+      results = results.filter(t => t.position === filters.position);
+    }
+
+    // Nationality filter
+    if (filters.nationality) {
+      results = results.filter(t => t.nationality === filters.nationality);
+    }
+
+    // Transfer type filter
+    if (filters.transferType) {
+      results = results.filter(t => {
+        const fee = (t.fee || '').toLowerCase();
+        if (filters.transferType === 'loan') return fee.includes('kiralık') || fee.includes('loan');
+        if (filters.transferType === 'free') return fee.includes('ablösefrei') || fee.includes('free') || fee === '-';
+        if (filters.transferType === 'permanent') return !fee.includes('kiralık') && !fee.includes('loan') && fee !== '-' && !fee.includes('ablösefrei');
+        return true;
+      });
+    }
+
+    // Sort
+    if (filters.sortBy) {
+      results.sort((a, b) => {
+        const direction = filters.sortDirection === 'desc' ? -1 : 1;
+        switch (filters.sortBy) {
+          case 'age':
+            return ((a.age || 0) - (b.age || 0)) * direction;
+          case 'name':
+            return (a.name || '').localeCompare(b.name || '') * direction;
+          case 'position':
+            return (a.position || '').localeCompare(b.position || '') * direction;
+          default:
+            return 0;
+        }
+      });
+    }
+
+    return results;
+  },
+
+  /**
+   * Get unique values from cache for filter dropdowns
+   * @returns {Promise<Object>}
+   */
+  async getCacheFilterOptions() {
+    const cache = await this.getTransferCache();
+    const positions = new Set();
+    const nationalities = new Set();
+
+    for (const transfer of cache.transfers) {
+      if (transfer.position) positions.add(transfer.position);
+      if (transfer.nationality) nationalities.add(transfer.nationality);
+    }
+
+    return {
+      positions: Array.from(positions).sort(),
+      nationalities: Array.from(nationalities).sort(),
+      totalTransfers: cache.transfers.length,
+      lastUpdated: cache.lastUpdated,
+      pagesScanned: cache.pageUrls.length
+    };
+  },
+
+  /**
+   * Clear transfer cache
+   * @returns {Promise<void>}
+   */
+  async clearTransferCache() {
+    await this.set(this.KEYS.TRANSFER_CACHE, { transfers: [], lastUpdated: null, pageUrls: [] });
+  },
+
   // ===== EXPORT METHODS =====
 
   /**
@@ -291,7 +426,7 @@ const StorageManager = {
    */
   async exportWatchlistCSV() {
     const watchlist = await this.getWatchlist();
-    
+
     if (watchlist.length === 0) {
       return 'No data to export';
     }
