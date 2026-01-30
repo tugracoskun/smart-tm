@@ -31,17 +31,27 @@ chrome.runtime.onInstalled.addListener((details) => {
     }
 
     // Create context menu
-    try {
-        chrome.contextMenus.create({
-            id: 'addToWatchlist',
-            title: 'Smart-TM: Watchlist\'e Ekle',
-            contexts: ['link'],
-            documentUrlPatterns: ['*://*.transfermarkt.com/*', '*://*.transfermarkt.com.tr/*', '*://*.transfermarkt.de/*']
-        });
-    } catch (e) {
-        console.log('[Smart-TM] Context menu already exists or error:', e);
-    }
+    setupContextMenu();
 });
+
+// ===== CONTEXT MENU SETUP ===== //
+
+function setupContextMenu() {
+    try {
+        if (typeof chrome !== 'undefined' && chrome.contextMenus) {
+            chrome.contextMenus.removeAll(() => {
+                chrome.contextMenus.create({
+                    id: 'addToWatchlist',
+                    title: 'Smart-TM: Watchlist\'e Ekle',
+                    contexts: ['link'],
+                    documentUrlPatterns: ['*://*.transfermarkt.com/*', '*://*.transfermarkt.com.tr/*', '*://*.transfermarkt.de/*']
+                });
+            });
+        }
+    } catch (e) {
+        console.log('[Smart-TM] Context menu setup error:', e);
+    }
+}
 
 // ===== ALARM HANDLER ===== //
 
@@ -61,100 +71,124 @@ async function checkWatchlistTransfers() {
     const watchlist = await getWatchlist();
     if (watchlist.length === 0) return;
 
-    // In a real implementation, this would:
-    // 1. Fetch latest transfers from Transfermarkt
-    // 2. Compare with watchlist
-    // 3. Send notifications for matches
-
-    // For now, we'll just update the badge with watchlist count
+    // Update badge with watchlist count
     updateBadge(watchlist.length);
 }
 
 // ===== BADGE MANAGEMENT ===== //
 
 function updateBadge(count) {
-    if (count > 0) {
-        chrome.action.setBadgeText({ text: count.toString() });
-        chrome.action.setBadgeBackgroundColor({ color: '#EFAB14' });
-    } else {
-        chrome.action.setBadgeText({ text: '' });
+    try {
+        if (count > 0) {
+            chrome.action.setBadgeText({ text: count.toString() });
+            chrome.action.setBadgeBackgroundColor({ color: '#EFAB14' });
+        } else {
+            chrome.action.setBadgeText({ text: '' });
+        }
+    } catch (e) {
+        console.log('[Smart-TM] Badge update error:', e);
     }
 }
 
 // ===== NOTIFICATIONS ===== //
 
 function showNotification(title, message, playerId = null) {
-    chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'icons/icon128.png',
-        title: title,
-        message: message,
-        priority: 2
-    }, (notificationId) => {
-        if (playerId) {
-            // Store notification ID for click handling
-            chrome.storage.local.set({
-                [`notification_${notificationId}`]: { playerId }
-            });
-        }
-    });
+    try {
+        chrome.notifications.create({
+            type: 'basic',
+            iconUrl: 'icons/icon128.png',
+            title: title,
+            message: message,
+            priority: 2
+        }, (notificationId) => {
+            if (playerId && notificationId) {
+                chrome.storage.local.set({
+                    [`notification_${notificationId}`]: { playerId }
+                });
+            }
+        });
+    } catch (e) {
+        console.log('[Smart-TM] Notification error:', e);
+    }
 }
 
-// Handle notification clicks
-chrome.notifications.onClicked.addListener(async (notificationId) => {
-    const data = await chrome.storage.local.get(`notification_${notificationId}`);
-    const notifData = data[`notification_${notificationId}`];
+// ===== EVENT LISTENERS SETUP ===== //
 
-    if (notifData && notifData.playerId) {
-        // Open player's Transfermarkt page
-        chrome.tabs.create({
-            url: `https://www.transfermarkt.com/spieler/profil/spieler/${notifData.playerId}`
+// Handle notification clicks
+try {
+    if (typeof chrome !== 'undefined' && chrome.notifications) {
+        chrome.notifications.onClicked.addListener(async (notificationId) => {
+            try {
+                const data = await chrome.storage.local.get(`notification_${notificationId}`);
+                const notifData = data[`notification_${notificationId}`];
+
+                if (notifData && notifData.playerId) {
+                    chrome.tabs.create({
+                        url: `https://www.transfermarkt.com/spieler/profil/spieler/${notifData.playerId}`
+                    });
+                }
+
+                chrome.storage.local.remove(`notification_${notificationId}`);
+            } catch (e) {
+                console.log('[Smart-TM] Notification click handler error:', e);
+            }
         });
     }
+} catch (e) {
+    console.log('[Smart-TM] Notifications listener setup error:', e);
+}
 
-    // Clean up
-    chrome.storage.local.remove(`notification_${notificationId}`);
-});
-
-// ===== CONTEXT MENU HANDLER ===== //
-
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-    if (info.menuItemId === 'addToWatchlist') {
-        // Extract player ID from URL
-        const match = info.linkUrl.match(/spieler\/(\d+)/);
-        if (match) {
-            // Send message to content script to add player
-            chrome.tabs.sendMessage(tab.id, {
-                action: 'addToWatchlistFromContext',
-                playerId: match[1],
-                url: info.linkUrl
-            });
-        }
+// Handle context menu clicks
+try {
+    if (typeof chrome !== 'undefined' && chrome.contextMenus) {
+        chrome.contextMenus.onClicked.addListener((info, tab) => {
+            try {
+                if (info.menuItemId === 'addToWatchlist') {
+                    const match = info.linkUrl.match(/spieler\/(\d+)/);
+                    if (match && tab && tab.id) {
+                        chrome.tabs.sendMessage(tab.id, {
+                            action: 'addToWatchlistFromContext',
+                            playerId: match[1],
+                            url: info.linkUrl
+                        });
+                    }
+                }
+            } catch (e) {
+                console.log('[Smart-TM] Context menu click handler error:', e);
+            }
+        });
     }
-});
+} catch (e) {
+    console.log('[Smart-TM] Context menu listener setup error:', e);
+}
 
 // ===== MESSAGE HANDLERS ===== //
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    switch (request.action) {
-        case 'showNotification':
-            showNotification(request.title, request.message, request.playerId);
-            sendResponse({ success: true });
-            break;
+    try {
+        switch (request.action) {
+            case 'showNotification':
+                showNotification(request.title, request.message, request.playerId);
+                sendResponse({ success: true });
+                break;
 
-        case 'updateBadge':
-            updateBadge(request.count);
-            sendResponse({ success: true });
-            break;
+            case 'updateBadge':
+                updateBadge(request.count);
+                sendResponse({ success: true });
+                break;
 
-        case 'getWatchlistCount':
-            getWatchlist().then(watchlist => {
-                sendResponse({ count: watchlist.length });
-            });
-            return true; // Keep channel open for async response
+            case 'getWatchlistCount':
+                getWatchlist().then(watchlist => {
+                    sendResponse({ count: watchlist.length });
+                });
+                return true;
 
-        default:
-            sendResponse({ success: false, error: 'Unknown action' });
+            default:
+                sendResponse({ success: false, error: 'Unknown action' });
+        }
+    } catch (e) {
+        console.log('[Smart-TM] Message handler error:', e);
+        sendResponse({ success: false, error: e.message });
     }
 });
 
@@ -184,16 +218,18 @@ async function getWatchlist() {
 
 // ===== TAB UPDATE HANDLER ===== //
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.status === 'complete' && tab.url) {
-        // Check if this is a Transfermarkt page
-        if (tab.url.includes('transfermarkt')) {
-            // Update badge with watchlist count
-            getWatchlist().then(watchlist => {
-                updateBadge(watchlist.length);
-            });
+try {
+    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+        if (changeInfo.status === 'complete' && tab && tab.url) {
+            if (tab.url.includes('transfermarkt')) {
+                getWatchlist().then(watchlist => {
+                    updateBadge(watchlist.length);
+                });
+            }
         }
-    }
-});
+    });
+} catch (e) {
+    console.log('[Smart-TM] Tab listener setup error:', e);
+}
 
 console.log('[Smart-TM] Background service worker loaded');
