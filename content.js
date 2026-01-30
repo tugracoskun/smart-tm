@@ -1,0 +1,587 @@
+/**
+ * Smart-TM Content Script
+ * Enhances Transfermarkt transfer pages with filtering, notes, and scout tools
+ */
+
+(async function () {
+    'use strict';
+
+    // Configuration
+    const CONFIG = {
+        selectors: {
+            transferTable: '.items, #yw1, table.items',
+            transferRow: 'tbody tr',
+            playerLink: 'a[href*="/profil/spieler/"]',
+            feeCell: 'td.rechts:last-child, td:last-child'
+        },
+        colors: {
+            loan: { bg: 'rgba(30, 136, 229, 0.15)', border: '#1e88e5' },
+            permanent: { bg: 'rgba(67, 160, 71, 0.15)', border: '#43a047' },
+            free: { bg: 'rgba(117, 117, 117, 0.15)', border: '#757575' }
+        }
+    };
+
+    // State
+    let settings = {};
+    let watchlist = [];
+    let notes = {};
+    let isInitialized = false;
+
+    // ===== INITIALIZATION ===== //
+
+    async function init() {
+        if (isInitialized) return;
+
+        // Load data from storage
+        settings = await StorageManager.getSettings();
+        watchlist = await StorageManager.getWatchlist();
+        notes = await StorageManager.getNotes();
+
+        // Check if we're on a transfer page
+        if (isTransferPage()) {
+            console.log('[Smart-TM] Initializing on transfer page...');
+
+            // Apply enhancements
+            if (settings.transferColors) applyTransferColors();
+            if (settings.scoutButtons) addScoutButtons();
+            if (settings.notesModule) addNoteButtons();
+            addWatchlistButtons();
+            injectFilterPanel();
+
+            // Set up MutationObserver for dynamic content
+            observePageChanges();
+
+            isInitialized = true;
+            console.log('[Smart-TM] Initialization complete!');
+        }
+    }
+
+    /**
+     * Check if current page is a transfer-related page
+     */
+    function isTransferPage() {
+        const url = window.location.href.toLowerCase();
+        return url.includes('/transfers/') ||
+            url.includes('/neuestetransfers/') ||
+            url.includes('/transferrekorde/') ||
+            url.includes('/transferticker/');
+    }
+
+    // ===== TRANSFER COLORS ===== //
+
+    /**
+     * Apply color coding to transfer rows based on transfer type
+     */
+    function applyTransferColors() {
+        const tables = document.querySelectorAll(CONFIG.selectors.transferTable);
+
+        tables.forEach(table => {
+            const rows = table.querySelectorAll(CONFIG.selectors.transferRow);
+
+            rows.forEach(row => {
+                if (row.classList.contains('smarttm-colored')) return;
+
+                const feeCell = row.querySelector('td:last-child');
+                if (!feeCell) return;
+
+                const feeText = feeCell.textContent.trim().toLowerCase();
+                const transferType = Utils.getTransferType(feeText);
+
+                const colorConfig = CONFIG.colors[transferType];
+                if (colorConfig) {
+                    row.style.backgroundColor = colorConfig.bg;
+                    row.style.borderLeft = `3px solid ${colorConfig.border}`;
+                    row.classList.add('smarttm-colored', `smarttm-${transferType}`);
+                }
+            });
+        });
+    }
+
+    // ===== SCOUT BUTTONS ===== //
+
+    /**
+     * Add quick scout buttons (YouTube, WyScout, Instat) to each player
+     */
+    function addScoutButtons() {
+        const playerLinks = document.querySelectorAll(CONFIG.selectors.playerLink);
+
+        playerLinks.forEach(link => {
+            const row = link.closest('tr');
+            if (!row || row.querySelector('.smarttm-scout-buttons')) return;
+
+            const playerName = link.textContent.trim();
+            const container = createScoutButtonsContainer(playerName);
+
+            // Find the best cell to add buttons (usually the player name cell)
+            const nameCell = link.closest('td');
+            if (nameCell) {
+                nameCell.style.position = 'relative';
+                nameCell.appendChild(container);
+            }
+        });
+    }
+
+    /**
+     * Create scout buttons container
+     */
+    function createScoutButtonsContainer(playerName) {
+        const container = Utils.createElement('div', {
+            className: 'smarttm-scout-buttons'
+        });
+
+        // YouTube button
+        const ytBtn = Utils.createElement('a', {
+            className: 'smarttm-scout-btn smarttm-youtube',
+            href: Utils.getYouTubeSearchUrl(playerName),
+            target: '_blank',
+            title: 'YouTube\'da ara'
+        });
+        ytBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`;
+        container.appendChild(ytBtn);
+
+        // WyScout button
+        const wsBtn = Utils.createElement('a', {
+            className: 'smarttm-scout-btn smarttm-wyscout',
+            href: Utils.getWyScoutSearchUrl(playerName),
+            target: '_blank',
+            title: 'WyScout\'ta ara'
+        });
+        wsBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>`;
+        container.appendChild(wsBtn);
+
+        // Instat button
+        const inBtn = Utils.createElement('a', {
+            className: 'smarttm-scout-btn smarttm-instat',
+            href: Utils.getInstatSearchUrl(playerName),
+            target: '_blank',
+            title: 'Instat\'ta ara'
+        });
+        inBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>`;
+        container.appendChild(inBtn);
+
+        return container;
+    }
+
+    // ===== NOTE BUTTONS ===== //
+
+    /**
+     * Add note buttons to each transfer row
+     */
+    function addNoteButtons() {
+        const tables = document.querySelectorAll(CONFIG.selectors.transferTable);
+
+        tables.forEach(table => {
+            const rows = table.querySelectorAll(CONFIG.selectors.transferRow);
+
+            rows.forEach(row => {
+                if (row.querySelector('.smarttm-note-btn')) return;
+
+                const transferId = Utils.generateTransferId(row);
+                const existingNote = notes[transferId];
+
+                const lastCell = row.querySelector('td:last-child');
+                if (!lastCell) return;
+
+                const noteBtn = Utils.createElement('button', {
+                    className: `smarttm-note-btn ${existingNote ? 'has-note' : ''}`,
+                    title: existingNote ? 'Notu Düzenle' : 'Not Ekle',
+                    dataset: { transferId }
+                });
+                noteBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+
+                noteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openNoteModal(transferId, row);
+                });
+
+                lastCell.style.position = 'relative';
+                lastCell.appendChild(noteBtn);
+            });
+        });
+    }
+
+    /**
+     * Open note modal
+     */
+    function openNoteModal(transferId, row) {
+        // Remove existing modal
+        const existingModal = document.querySelector('.smarttm-note-modal');
+        if (existingModal) existingModal.remove();
+
+        const existingNote = notes[transferId];
+        const playerData = Utils.extractPlayerData(row);
+
+        const modal = Utils.createElement('div', { className: 'smarttm-note-modal' });
+        modal.innerHTML = `
+      <div class="smarttm-note-modal-content">
+        <div class="smarttm-note-modal-header">
+          <h3>📝 ${playerData?.name || 'Oyuncu'} için Not</h3>
+          <button class="smarttm-note-modal-close">&times;</button>
+        </div>
+        <textarea class="smarttm-note-textarea" placeholder="Notunuzu buraya yazın...">${existingNote?.text || ''}</textarea>
+        <div class="smarttm-note-modal-actions">
+          <button class="smarttm-btn smarttm-btn-secondary smarttm-note-delete" ${!existingNote ? 'style="display:none"' : ''}>Sil</button>
+          <button class="smarttm-btn smarttm-btn-primary smarttm-note-save">Kaydet</button>
+        </div>
+      </div>
+    `;
+
+        document.body.appendChild(modal);
+
+        // Event listeners
+        modal.querySelector('.smarttm-note-modal-close').addEventListener('click', () => modal.remove());
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+
+        modal.querySelector('.smarttm-note-save').addEventListener('click', async () => {
+            const text = modal.querySelector('.smarttm-note-textarea').value.trim();
+            if (text) {
+                await StorageManager.saveNote(transferId, text);
+                notes[transferId] = { text, updatedAt: new Date().toISOString() };
+                const noteBtn = row.querySelector('.smarttm-note-btn');
+                if (noteBtn) noteBtn.classList.add('has-note');
+            }
+            modal.remove();
+        });
+
+        modal.querySelector('.smarttm-note-delete').addEventListener('click', async () => {
+            await StorageManager.deleteNote(transferId);
+            delete notes[transferId];
+            const noteBtn = row.querySelector('.smarttm-note-btn');
+            if (noteBtn) noteBtn.classList.remove('has-note');
+            modal.remove();
+        });
+
+        // Focus textarea
+        modal.querySelector('.smarttm-note-textarea').focus();
+    }
+
+    // ===== WATCHLIST BUTTONS ===== //
+
+    /**
+     * Add watchlist star buttons to each player
+     */
+    function addWatchlistButtons() {
+        const playerLinks = document.querySelectorAll(CONFIG.selectors.playerLink);
+
+        playerLinks.forEach(link => {
+            const row = link.closest('tr');
+            if (!row || row.querySelector('.smarttm-watchlist-btn')) return;
+
+            const playerData = Utils.extractPlayerData(row);
+            if (!playerData || !playerData.id) return;
+
+            const isInWatchlist = watchlist.some(p => p.id === playerData.id);
+
+            const btn = Utils.createElement('button', {
+                className: `smarttm-watchlist-btn ${isInWatchlist ? 'active' : ''}`,
+                title: isInWatchlist ? 'Watchlist\'ten Çıkar' : 'Watchlist\'e Ekle',
+                dataset: { playerId: playerData.id }
+            });
+            btn.innerHTML = `<svg viewBox="0 0 24 24" fill="${isInWatchlist ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
+
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+
+                if (isInWatchlist) {
+                    await StorageManager.removeFromWatchlist(playerData.id);
+                    watchlist = watchlist.filter(p => p.id !== playerData.id);
+                    btn.classList.remove('active');
+                    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
+                    btn.title = 'Watchlist\'e Ekle';
+                } else {
+                    await StorageManager.addToWatchlist(playerData);
+                    watchlist.push(playerData);
+                    btn.classList.add('active');
+                    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
+                    btn.title = 'Watchlist\'ten Çıkar';
+                }
+            });
+
+            // Insert before player name
+            const nameCell = link.closest('td');
+            if (nameCell) {
+                nameCell.insertBefore(btn, nameCell.firstChild);
+            }
+        });
+    }
+
+    // ===== FILTER PANEL ===== //
+
+    /**
+     * Inject the Smart Filter panel above the transfer table
+     */
+    function injectFilterPanel() {
+        const table = document.querySelector(CONFIG.selectors.transferTable);
+        if (!table || document.querySelector('.smarttm-filter-panel')) return;
+
+        const panel = Utils.createElement('div', { className: 'smarttm-filter-panel' });
+        panel.innerHTML = `
+      <div class="smarttm-filter-header">
+        <div class="smarttm-filter-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+          </svg>
+          <span>Smart Filters</span>
+        </div>
+        <button class="smarttm-filter-toggle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+      </div>
+      <div class="smarttm-filter-body">
+        <div class="smarttm-filter-row">
+          <div class="smarttm-filter-group">
+            <label>Yaş Aralığı</label>
+            <div class="smarttm-filter-range">
+              <input type="number" id="smarttm-age-min" placeholder="Min" min="15" max="45">
+              <span>-</span>
+              <input type="number" id="smarttm-age-max" placeholder="Max" min="15" max="45">
+            </div>
+          </div>
+          <div class="smarttm-filter-group">
+            <label>Piyasa Değeri</label>
+            <div class="smarttm-filter-range">
+              <input type="text" id="smarttm-value-min" placeholder="Min (€)">
+              <span>-</span>
+              <input type="text" id="smarttm-value-max" placeholder="Max (€)">
+            </div>
+          </div>
+          <div class="smarttm-filter-group">
+            <label>Transfer Tipi</label>
+            <div class="smarttm-filter-checkboxes">
+              <label><input type="checkbox" id="smarttm-type-loan" checked> Kiralık</label>
+              <label><input type="checkbox" id="smarttm-type-permanent" checked> Bonservisli</label>
+              <label><input type="checkbox" id="smarttm-type-free" checked> Bedelsiz</label>
+            </div>
+          </div>
+        </div>
+        <div class="smarttm-filter-actions">
+          <button class="smarttm-btn smarttm-btn-secondary" id="smarttm-filter-reset">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="1 4 1 10 7 10"/>
+              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+            </svg>
+            Sıfırla
+          </button>
+          <button class="smarttm-btn smarttm-btn-primary" id="smarttm-filter-apply">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Uygula
+          </button>
+          <button class="smarttm-btn smarttm-btn-accent" id="smarttm-filter-save">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            Kaydet
+          </button>
+        </div>
+      </div>
+    `;
+
+        // Insert before table
+        table.parentNode.insertBefore(panel, table);
+
+        // Event listeners
+        panel.querySelector('.smarttm-filter-toggle').addEventListener('click', () => {
+            panel.classList.toggle('collapsed');
+        });
+
+        panel.querySelector('#smarttm-filter-apply').addEventListener('click', applyFilters);
+        panel.querySelector('#smarttm-filter-reset').addEventListener('click', resetFilters);
+        panel.querySelector('#smarttm-filter-save').addEventListener('click', saveCurrentFilter);
+    }
+
+    /**
+     * Apply filters to the transfer table
+     */
+    function applyFilters() {
+        const ageMin = parseInt(document.getElementById('smarttm-age-min')?.value) || 0;
+        const ageMax = parseInt(document.getElementById('smarttm-age-max')?.value) || 99;
+        const valueMin = Utils.parseMarketValue(document.getElementById('smarttm-value-min')?.value) || 0;
+        const valueMax = Utils.parseMarketValue(document.getElementById('smarttm-value-max')?.value) || Infinity;
+
+        const showLoan = document.getElementById('smarttm-type-loan')?.checked ?? true;
+        const showPermanent = document.getElementById('smarttm-type-permanent')?.checked ?? true;
+        const showFree = document.getElementById('smarttm-type-free')?.checked ?? true;
+
+        const tables = document.querySelectorAll(CONFIG.selectors.transferTable);
+
+        tables.forEach(table => {
+            const rows = table.querySelectorAll(CONFIG.selectors.transferRow);
+
+            rows.forEach(row => {
+                const playerData = Utils.extractPlayerData(row);
+                if (!playerData) return;
+
+                let visible = true;
+
+                // Age filter
+                const age = playerData.age || 0;
+                if (age < ageMin || age > ageMax) {
+                    visible = false;
+                }
+
+                // Market value filter
+                const value = Utils.parseMarketValue(playerData.marketValue) || 0;
+                if (value < valueMin || value > valueMax) {
+                    visible = false;
+                }
+
+                // Transfer type filter
+                const feeText = playerData.fee || '';
+                const transferType = Utils.getTransferType(feeText);
+
+                if (transferType === 'loan' && !showLoan) visible = false;
+                if (transferType === 'permanent' && !showPermanent) visible = false;
+                if (transferType === 'free' && !showFree) visible = false;
+
+                row.style.display = visible ? '' : 'none';
+            });
+        });
+    }
+
+    /**
+     * Reset all filters
+     */
+    function resetFilters() {
+        document.getElementById('smarttm-age-min').value = '';
+        document.getElementById('smarttm-age-max').value = '';
+        document.getElementById('smarttm-value-min').value = '';
+        document.getElementById('smarttm-value-max').value = '';
+        document.getElementById('smarttm-type-loan').checked = true;
+        document.getElementById('smarttm-type-permanent').checked = true;
+        document.getElementById('smarttm-type-free').checked = true;
+
+        // Show all rows
+        const tables = document.querySelectorAll(CONFIG.selectors.transferTable);
+        tables.forEach(table => {
+            const rows = table.querySelectorAll(CONFIG.selectors.transferRow);
+            rows.forEach(row => row.style.display = '');
+        });
+    }
+
+    /**
+     * Save current filter configuration
+     */
+    async function saveCurrentFilter() {
+        const filterName = prompt('Filtre için bir isim girin:');
+        if (!filterName) return;
+
+        const filter = {
+            name: filterName,
+            ageMin: parseInt(document.getElementById('smarttm-age-min')?.value) || null,
+            ageMax: parseInt(document.getElementById('smarttm-age-max')?.value) || null,
+            valueMin: document.getElementById('smarttm-value-min')?.value || null,
+            valueMax: document.getElementById('smarttm-value-max')?.value || null,
+            transferTypes: []
+        };
+
+        if (document.getElementById('smarttm-type-loan')?.checked) filter.transferTypes.push('Kiralık');
+        if (document.getElementById('smarttm-type-permanent')?.checked) filter.transferTypes.push('Bonservisli');
+        if (document.getElementById('smarttm-type-free')?.checked) filter.transferTypes.push('Bedelsiz');
+
+        await StorageManager.saveFilter(filter);
+        alert('Filtre kaydedildi!');
+    }
+
+    // ===== MUTATION OBSERVER ===== //
+
+    /**
+     * Observe page changes for dynamically loaded content
+     */
+    function observePageChanges() {
+        const observer = new MutationObserver(Utils.debounce((mutations) => {
+            let shouldReapply = false;
+
+            mutations.forEach(mutation => {
+                if (mutation.addedNodes.length > 0) {
+                    mutation.addedNodes.forEach(node => {
+                        if (node.nodeType === 1 && (node.matches?.('tr') || node.querySelector?.('tr'))) {
+                            shouldReapply = true;
+                        }
+                    });
+                }
+            });
+
+            if (shouldReapply) {
+                console.log('[Smart-TM] Detected new content, reapplying enhancements...');
+                if (settings.transferColors) applyTransferColors();
+                if (settings.scoutButtons) addScoutButtons();
+                if (settings.notesModule) addNoteButtons();
+                addWatchlistButtons();
+            }
+        }, 500));
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+
+    // ===== MESSAGE LISTENER ===== //
+
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        switch (request.action) {
+            case 'settingsChanged':
+                loadSettingsAndReapply();
+                break;
+            case 'applyFilter':
+                applyStoredFilter(request.filter);
+                break;
+        }
+        sendResponse({ success: true });
+    });
+
+    /**
+     * Reload settings and reapply enhancements
+     */
+    async function loadSettingsAndReapply() {
+        settings = await StorageManager.getSettings();
+
+        // Remove existing enhancements and reapply
+        document.querySelectorAll('.smarttm-scout-buttons, .smarttm-note-btn, .smarttm-watchlist-btn').forEach(el => el.remove());
+        document.querySelectorAll('.smarttm-colored').forEach(row => {
+            row.style.backgroundColor = '';
+            row.style.borderLeft = '';
+            row.classList.remove('smarttm-colored', 'smarttm-loan', 'smarttm-permanent', 'smarttm-free');
+        });
+
+        if (settings.transferColors) applyTransferColors();
+        if (settings.scoutButtons) addScoutButtons();
+        if (settings.notesModule) addNoteButtons();
+        addWatchlistButtons();
+    }
+
+    /**
+     * Apply a stored filter
+     */
+    function applyStoredFilter(filter) {
+        if (filter.ageMin) document.getElementById('smarttm-age-min').value = filter.ageMin;
+        if (filter.ageMax) document.getElementById('smarttm-age-max').value = filter.ageMax;
+        if (filter.valueMin) document.getElementById('smarttm-value-min').value = filter.valueMin;
+        if (filter.valueMax) document.getElementById('smarttm-value-max').value = filter.valueMax;
+
+        document.getElementById('smarttm-type-loan').checked = filter.transferTypes?.includes('Kiralık') ?? true;
+        document.getElementById('smarttm-type-permanent').checked = filter.transferTypes?.includes('Bonservisli') ?? true;
+        document.getElementById('smarttm-type-free').checked = filter.transferTypes?.includes('Bedelsiz') ?? true;
+
+        applyFilters();
+    }
+
+    // ===== START ===== //
+
+    // Wait for DOM to be ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})();

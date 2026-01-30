@@ -1,0 +1,74 @@
+{
+  "manifest_version": 3,
+  "name": "Smart-TM: Transfermarkt Scout Extension",
+  "version": "1.0.0",
+  "description": "Profesyonel scoutlar için gelişmiş Transfermarkt eklentisi. Filtreleme, watchlist, bildirimler ve daha fazlası.",
+  "author": "Smart-TM",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "Smart-TM Scout"
+  },
+  "permissions": [
+    "storage",
+    "notifications",
+    "alarms",
+    "activeTab",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "*://*.transfermarkt.com/*",
+    "*://*.transfermarkt.com.tr/*",
+    "*://*.transfermarkt.de/*",
+    "*://*.transfermarkt.co.uk/*",
+    "*://*.transfermarkt.es/*",
+    "*://*.transfermarkt.fr/*",
+    "*://*.transfermarkt.it/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.transfermarkt.com/*",
+        "*://*.transfermarkt.com.tr/*",
+        "*://*.transfermarkt.de/*",
+        "*://*.transfermarkt.co.uk/*",
+        "*://*.transfermarkt.es/*",
+        "*://*.transfermarkt.fr/*",
+        "*://*.transfermarkt.it/*"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "js": [
+        "storage.js",
+        "utils.js",
+        "content.js"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/*"
+      ],
+      "matches": [
+        "*://*.transfermarkt.com/*",
+        "*://*.transfermarkt.com.tr/*",
+        "*://*.transfermarkt.de/*"
+      ]
+    }
+  ]
+}

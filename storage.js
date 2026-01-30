@@ -1,0 +1,323 @@
+/**
+ * Smart-TM Storage Manager
+ * Chrome Storage API wrapper for managing extension data
+ */
+
+const StorageManager = {
+  // Storage keys
+  KEYS: {
+    WATCHLIST: 'smarttm_watchlist',
+    FILTERS: 'smarttm_filters',
+    NOTES: 'smarttm_notes',
+    SETTINGS: 'smarttm_settings',
+    LEAGUE_RADAR: 'smarttm_league_radar',
+    NOTIFICATIONS: 'smarttm_notifications'
+  },
+
+  // Default settings
+  DEFAULT_SETTINGS: {
+    transferColors: true,
+    scoutButtons: true,
+    notesModule: true,
+    notifyWatchlist: true,
+    notifyLeagues: false
+  },
+
+  /**
+   * Get data from storage
+   * @param {string} key - Storage key
+   * @returns {Promise<any>}
+   */
+  async get(key) {
+    return new Promise((resolve) => {
+      chrome.storage.local.get([key], (result) => {
+        resolve(result[key] || null);
+      });
+    });
+  },
+
+  /**
+   * Set data to storage
+   * @param {string} key - Storage key
+   * @param {any} value - Data to store
+   * @returns {Promise<void>}
+   */
+  async set(key, value) {
+    return new Promise((resolve) => {
+      chrome.storage.local.set({ [key]: value }, resolve);
+    });
+  },
+
+  /**
+   * Remove data from storage
+   * @param {string} key - Storage key
+   * @returns {Promise<void>}
+   */
+  async remove(key) {
+    return new Promise((resolve) => {
+      chrome.storage.local.remove([key], resolve);
+    });
+  },
+
+  /**
+   * Clear all extension data
+   * @returns {Promise<void>}
+   */
+  async clearAll() {
+    return new Promise((resolve) => {
+      chrome.storage.local.clear(resolve);
+    });
+  },
+
+  // ===== WATCHLIST METHODS =====
+
+  /**
+   * Get watchlist
+   * @returns {Promise<Array>}
+   */
+  async getWatchlist() {
+    const watchlist = await this.get(this.KEYS.WATCHLIST);
+    return watchlist || [];
+  },
+
+  /**
+   * Add player to watchlist
+   * @param {Object} player - Player data
+   * @returns {Promise<void>}
+   */
+  async addToWatchlist(player) {
+    const watchlist = await this.getWatchlist();
+    const exists = watchlist.some(p => p.id === player.id);
+    
+    if (!exists) {
+      player.addedAt = new Date().toISOString();
+      watchlist.push(player);
+      await this.set(this.KEYS.WATCHLIST, watchlist);
+    }
+  },
+
+  /**
+   * Remove player from watchlist
+   * @param {string} playerId - Player ID
+   * @returns {Promise<void>}
+   */
+  async removeFromWatchlist(playerId) {
+    const watchlist = await this.getWatchlist();
+    const filtered = watchlist.filter(p => p.id !== playerId);
+    await this.set(this.KEYS.WATCHLIST, filtered);
+  },
+
+  /**
+   * Check if player is in watchlist
+   * @param {string} playerId - Player ID
+   * @returns {Promise<boolean>}
+   */
+  async isInWatchlist(playerId) {
+    const watchlist = await this.getWatchlist();
+    return watchlist.some(p => p.id === playerId);
+  },
+
+  // ===== FILTERS METHODS =====
+
+  /**
+   * Get saved filters
+   * @returns {Promise<Array>}
+   */
+  async getFilters() {
+    const filters = await this.get(this.KEYS.FILTERS);
+    return filters || [];
+  },
+
+  /**
+   * Save a filter
+   * @param {Object} filter - Filter configuration
+   * @returns {Promise<void>}
+   */
+  async saveFilter(filter) {
+    const filters = await this.getFilters();
+    filter.id = `filter_${Date.now()}`;
+    filter.createdAt = new Date().toISOString();
+    filters.push(filter);
+    await this.set(this.KEYS.FILTERS, filters);
+  },
+
+  /**
+   * Delete a filter
+   * @param {string} filterId - Filter ID
+   * @returns {Promise<void>}
+   */
+  async deleteFilter(filterId) {
+    const filters = await this.getFilters();
+    const filtered = filters.filter(f => f.id !== filterId);
+    await this.set(this.KEYS.FILTERS, filtered);
+  },
+
+  /**
+   * Update a filter
+   * @param {string} filterId - Filter ID
+   * @param {Object} updates - Updated filter data
+   * @returns {Promise<void>}
+   */
+  async updateFilter(filterId, updates) {
+    const filters = await this.getFilters();
+    const index = filters.findIndex(f => f.id === filterId);
+    
+    if (index !== -1) {
+      filters[index] = { ...filters[index], ...updates };
+      await this.set(this.KEYS.FILTERS, filters);
+    }
+  },
+
+  // ===== NOTES METHODS =====
+
+  /**
+   * Get all notes
+   * @returns {Promise<Object>}
+   */
+  async getNotes() {
+    const notes = await this.get(this.KEYS.NOTES);
+    return notes || {};
+  },
+
+  /**
+   * Get note for a specific transfer
+   * @param {string} transferId - Transfer ID
+   * @returns {Promise<string|null>}
+   */
+  async getNote(transferId) {
+    const notes = await this.getNotes();
+    return notes[transferId] || null;
+  },
+
+  /**
+   * Save note for a transfer
+   * @param {string} transferId - Transfer ID
+   * @param {string} noteText - Note content
+   * @returns {Promise<void>}
+   */
+  async saveNote(transferId, noteText) {
+    const notes = await this.getNotes();
+    notes[transferId] = {
+      text: noteText,
+      updatedAt: new Date().toISOString()
+    };
+    await this.set(this.KEYS.NOTES, notes);
+  },
+
+  /**
+   * Delete note for a transfer
+   * @param {string} transferId - Transfer ID
+   * @returns {Promise<void>}
+   */
+  async deleteNote(transferId) {
+    const notes = await this.getNotes();
+    delete notes[transferId];
+    await this.set(this.KEYS.NOTES, notes);
+  },
+
+  // ===== SETTINGS METHODS =====
+
+  /**
+   * Get settings
+   * @returns {Promise<Object>}
+   */
+  async getSettings() {
+    const settings = await this.get(this.KEYS.SETTINGS);
+    return { ...this.DEFAULT_SETTINGS, ...settings };
+  },
+
+  /**
+   * Update settings
+   * @param {Object} updates - Settings to update
+   * @returns {Promise<void>}
+   */
+  async updateSettings(updates) {
+    const settings = await this.getSettings();
+    const newSettings = { ...settings, ...updates };
+    await this.set(this.KEYS.SETTINGS, newSettings);
+  },
+
+  // ===== LEAGUE RADAR METHODS =====
+
+  /**
+   * Get league radar configuration
+   * @returns {Promise<Array>}
+   */
+  async getLeagueRadar() {
+    const radar = await this.get(this.KEYS.LEAGUE_RADAR);
+    return radar || [];
+  },
+
+  /**
+   * Set league radar configuration
+   * @param {Array} leagues - Array of league identifiers
+   * @returns {Promise<void>}
+   */
+  async setLeagueRadar(leagues) {
+    await this.set(this.KEYS.LEAGUE_RADAR, leagues);
+  },
+
+  // ===== EXPORT METHODS =====
+
+  /**
+   * Export all data as JSON
+   * @returns {Promise<Object>}
+   */
+  async exportAllData() {
+    const [watchlist, filters, notes, settings, leagueRadar] = await Promise.all([
+      this.getWatchlist(),
+      this.getFilters(),
+      this.getNotes(),
+      this.getSettings(),
+      this.getLeagueRadar()
+    ]);
+
+    return {
+      exportedAt: new Date().toISOString(),
+      version: '1.0.0',
+      data: {
+        watchlist,
+        filters,
+        notes,
+        settings,
+        leagueRadar
+      }
+    };
+  },
+
+  /**
+   * Export watchlist as CSV
+   * @returns {Promise<string>}
+   */
+  async exportWatchlistCSV() {
+    const watchlist = await this.getWatchlist();
+    
+    if (watchlist.length === 0) {
+      return 'No data to export';
+    }
+
+    const headers = ['Name', 'Age', 'Position', 'Nationality', 'Current Club', 'Market Value', 'Added At', 'Profile URL'];
+    const rows = watchlist.map(p => [
+      p.name || '',
+      p.age || '',
+      p.position || '',
+      p.nationality || '',
+      p.club || '',
+      p.marketValue || '',
+      p.addedAt || '',
+      p.profileUrl || ''
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    return csvContent;
+  }
+};
+
+// Make available globally (for both content script and popup)
+if (typeof window !== 'undefined') {
+  window.StorageManager = StorageManager;
+}
