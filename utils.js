@@ -91,8 +91,11 @@ const Utils = {
     getTransferType(fee) {
         if (!fee) return 'unknown';
         const f = fee.toLowerCase();
-        if (f.includes('kiralık') || f.includes('loan')) return 'loan';
-        if (f.includes('bedelsiz') || f.includes('free') || f === '-') return 'free';
+        // Daha agresif eşleşme (Kiralık, Loan, kira)
+        if (f.includes('kiralık') || f.includes('loan') || f.includes('kira')) return 'loan';
+        // Bedelsiz, Free
+        if (f.includes('bedelsiz') || f.includes('free') || f.includes('bedel') || f === '-') return 'free';
+        // Diğer her şey (Bonservisli)
         return 'permanent';
     },
 
