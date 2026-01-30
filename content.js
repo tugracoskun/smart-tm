@@ -11,9 +11,10 @@
     // Configuration
     const CONFIG = {
         selectors: {
-            transferTable: '.items, #yw1, table.items, .responsive-table table, .grid-view table',
-            transferRow: 'tbody tr',
-            playerLink: 'a[href*="/profil/spieler/"], a[href*="/spieler/"]',
+            // Sadece ana tablonun doğrudan çocukları olan satırları hedefle (iç tabloların satırlarını değil!)
+            transferTable: '.items, #yw1, table.items, .responsive-table table, .grid-view table, .transfer-liste',
+            transferRow: '.items > tbody > tr:not(.spacer), .responsive-table > table > tbody > tr:not(.spacer), #yw1 > table > tbody > tr:not(.spacer)',
+            playerLink: 'a[href*="/profil/spieler/"]',
             feeCell: 'td.rechts:last-child, td:last-child'
         },
         colors: {
@@ -178,20 +179,25 @@
     // ===== SCOUT BUTTONS ===== //
 
     /**
-     * Add quick scout buttons (YouTube, WyScout, Instat) to each player
+     * Her oyuncu satırına hızlı scout butonlarını (YouTube, WyScout, Instat) ekler
      */
     function addScoutButtons() {
-        const playerLinks = document.querySelectorAll(CONFIG.selectors.playerLink);
+        const rows = document.querySelectorAll(CONFIG.selectors.transferRow);
 
-        playerLinks.forEach(link => {
-            const row = link.closest('tr');
-            if (!row || row.querySelector('.smarttm-scout-buttons')) return;
+        rows.forEach(row => {
+            if (row.querySelector('.smarttm-scout-buttons')) return;
 
-            const playerName = link.textContent.trim();
-            const container = createScoutButtonsContainer(playerName);
+            // Kesin oyuncu verisini çek
+            const playerData = Utils.extractPlayerData(row);
+            if (!playerData || !playerData.name) return;
 
-            // Find the best cell to add buttons (usually the player name cell)
-            const nameCell = link.closest('td');
+            // Buton konteynerini oluştur
+            const container = createScoutButtonsContainer(playerData.name);
+
+            // İsmin olduğu hücreyi bul ve butonları oraya güvenli bir şekilde ekle
+            const playerLink = row.querySelector('a[href*="/profil/spieler/"]');
+            const nameCell = playerLink ? playerLink.closest('td') : null;
+
             if (nameCell) {
                 nameCell.style.position = 'relative';
                 nameCell.appendChild(container);
@@ -338,14 +344,13 @@
     // ===== WATCHLIST BUTTONS ===== //
 
     /**
-     * Add watchlist star buttons to each player
+     * Her oyuncuya Watchlist yıldız butonlarını ekler
      */
     function addWatchlistButtons() {
-        const playerLinks = document.querySelectorAll(CONFIG.selectors.playerLink);
+        const rows = document.querySelectorAll(CONFIG.selectors.transferRow);
 
-        playerLinks.forEach(link => {
-            const row = link.closest('tr');
-            if (!row || row.querySelector('.smarttm-watchlist-btn')) return;
+        rows.forEach(row => {
+            if (row.querySelector('.smarttm-watchlist-btn')) return;
 
             const playerData = Utils.extractPlayerData(row);
             if (!playerData || !playerData.id) return;
@@ -378,8 +383,9 @@
                 }
             });
 
-            // Insert before player name
-            const nameCell = link.closest('td');
+            // İsmin olduğu hücrenin başına ekle
+            const playerLink = row.querySelector('a[href*="/profil/spieler/"]');
+            const nameCell = playerLink ? playerLink.closest('td') : null;
             if (nameCell) {
                 nameCell.insertBefore(btn, nameCell.firstChild);
             }
