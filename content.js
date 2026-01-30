@@ -6,12 +6,14 @@
 (async function () {
     'use strict';
 
+    console.log('[Smart-TM] Content script loaded on:', window.location.href);
+
     // Configuration
     const CONFIG = {
         selectors: {
-            transferTable: '.items, #yw1, table.items',
+            transferTable: '.items, #yw1, table.items, .responsive-table table, .grid-view table',
             transferRow: 'tbody tr',
-            playerLink: 'a[href*="/profil/spieler/"]',
+            playerLink: 'a[href*="/profil/spieler/"], a[href*="/spieler/"]',
             feeCell: 'td.rechts:last-child, td:last-child'
         },
         colors: {
@@ -32,27 +34,36 @@
     async function init() {
         if (isInitialized) return;
 
-        // Load data from storage
-        settings = await StorageManager.getSettings();
-        watchlist = await StorageManager.getWatchlist();
-        notes = await StorageManager.getNotes();
+        try {
+            // Load data from storage
+            settings = await StorageManager.getSettings();
+            watchlist = await StorageManager.getWatchlist();
+            notes = await StorageManager.getNotes();
 
-        // Check if we're on a transfer page
-        if (isTransferPage()) {
-            console.log('[Smart-TM] Initializing on transfer page...');
+            console.log('[Smart-TM] Settings loaded:', settings);
+            console.log('[Smart-TM] Checking if transfer page...');
 
-            // Apply enhancements
-            if (settings.transferColors) applyTransferColors();
-            if (settings.scoutButtons) addScoutButtons();
-            if (settings.notesModule) addNoteButtons();
-            addWatchlistButtons();
-            injectFilterPanel();
+            // Check if we're on a transfer page
+            if (isTransferPage()) {
+                console.log('[Smart-TM] Initializing on transfer page...');
 
-            // Set up MutationObserver for dynamic content
-            observePageChanges();
+                // Apply enhancements
+                if (settings.transferColors) applyTransferColors();
+                if (settings.scoutButtons) addScoutButtons();
+                if (settings.notesModule) addNoteButtons();
+                addWatchlistButtons();
+                injectFilterPanel();
 
-            isInitialized = true;
-            console.log('[Smart-TM] Initialization complete!');
+                // Set up MutationObserver for dynamic content
+                observePageChanges();
+
+                isInitialized = true;
+                console.log('[Smart-TM] Initialization complete!');
+            } else {
+                console.log('[Smart-TM] Not a transfer page, skipping initialization');
+            }
+        } catch (error) {
+            console.error('[Smart-TM] Initialization error:', error);
         }
     }
 
@@ -61,10 +72,29 @@
      */
     function isTransferPage() {
         const url = window.location.href.toLowerCase();
-        return url.includes('/transfers/') ||
-            url.includes('/neuestetransfers/') ||
-            url.includes('/transferrekorde/') ||
-            url.includes('/transferticker/');
+
+        // Check for transfer-related keywords in URL
+        const transferKeywords = [
+            '/transfers/',
+            '/neuestetransfers/',
+            '/transferrekorde/',
+            '/transferticker/',
+            '/statistik/',
+            '/letzte-transfers',
+            '/transfer',
+            'plus=1',  // Transfer filter parameter
+            'plus1=1'
+        ];
+
+        const isTransfer = transferKeywords.some(keyword => url.includes(keyword));
+
+        // Also check if there are player links and tables on the page (fallback)
+        const hasPlayerLinks = document.querySelectorAll(CONFIG.selectors.playerLink).length > 0;
+        const hasTables = document.querySelectorAll(CONFIG.selectors.transferTable).length > 0;
+
+        console.log('[Smart-TM] URL check:', isTransfer, 'Player links:', hasPlayerLinks, 'Tables:', hasTables);
+
+        return isTransfer || (hasPlayerLinks && hasTables);
     }
 
     // ===== TRANSFER COLORS ===== //
