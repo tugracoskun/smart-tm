@@ -21,222 +21,185 @@
 
 /* ===== FILTER PANEL ===== */
 .smarttm-filter-panel {
-    background: linear-gradient(135deg, var(--smarttm-dark) 0%, var(--smarttm-dark-light) 100%);
+    background: linear-gradient(135deg, #00122e 0%, #001f4d 100%);
+    backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
     overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
 }
 
 .smarttm-filter-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 20px;
-    background: rgba(8, 113, 176, 0.2);
+    padding: 16px 24px;
+    background: rgba(255, 255, 255, 0.03);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     cursor: pointer;
+    transition: background 0.3s;
+}
+
+.smarttm-filter-header:hover {
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .smarttm-filter-title {
     display: flex;
     align-items: center;
-    gap: 10px;
-    color: var(--smarttm-white);
-    font-size: 15px;
-    font-weight: 600;
+    gap: 12px;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
 }
 
 .smarttm-filter-title svg {
     width: 20px;
     height: 20px;
     color: var(--smarttm-accent);
+    filter: drop-shadow(0 0 5px rgba(239, 171, 20, 0.4));
 }
 
 .smarttm-filter-toggle {
-    background: transparent;
-    border: none;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     color: var(--smarttm-white);
     cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
+    padding: 6px;
+    border-radius: 8px;
     transition: var(--smarttm-transition);
 }
 
-.smarttm-filter-toggle:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.smarttm-filter-toggle svg {
-    width: 20px;
-    height: 20px;
-    transition: transform var(--smarttm-transition);
-}
-
-.smarttm-filter-panel.collapsed .smarttm-filter-toggle svg {
-    transform: rotate(-90deg);
-}
-
 .smarttm-filter-body {
-    padding: 20px;
-    transition: all var(--smarttm-transition);
-}
-
-.smarttm-filter-panel.collapsed .smarttm-filter-body {
-    display: none;
+    padding: 24px;
 }
 
 .smarttm-filter-row {
     display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
+    gap: 24px;
+    margin-bottom: 24px;
 }
 
 .smarttm-filter-group {
     flex: 1;
-    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .smarttm-filter-group label {
     display: block;
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 12px;
-    font-weight: 500;
-    margin-bottom: 8px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 11px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1.2px;
 }
 
 .smarttm-filter-range {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 }
 
 .smarttm-filter-range input {
     flex: 1;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: var(--smarttm-radius);
-    padding: 10px 12px;
-    color: var(--smarttm-white);
-    font-size: 13px;
-    transition: var(--smarttm-transition);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
 }
 
 .smarttm-filter-range input:focus {
     outline: none;
-    border-color: var(--smarttm-primary);
-    background: rgba(255, 255, 255, 0.12);
-}
-
-.smarttm-filter-range input::placeholder {
-    color: rgba(255, 255, 255, 0.4);
-}
-
-.smarttm-filter-range span {
-    color: rgba(255, 255, 255, 0.5);
-}
-
-.smarttm-filter-checkboxes {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-}
-
-.smarttm-filter-checkboxes label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--smarttm-white);
-    font-size: 13px;
-    cursor: pointer;
-    text-transform: none;
-    letter-spacing: 0;
-}
-
-.smarttm-filter-checkboxes input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--smarttm-accent);
-    cursor: pointer;
-}
-
-/* ===== SELECT DROPDOWN ===== */
-.smarttm-select {
-    width: 100%;
+    border-color: var(--smarttm-accent);
     background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: var(--smarttm-radius);
-    padding: 10px 12px;
-    color: var(--smarttm-white);
-    font-size: 13px;
-    font-family: inherit;
-    cursor: pointer;
-    transition: var(--smarttm-transition);
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    padding-right: 36px;
+    box-shadow: 0 0 0 4px rgba(239, 171, 20, 0.1);
+}
+
+/* ===== SELECT DROPDOWN FORCE FIX ===== */
+.smarttm-select {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 100% !important;
+    height: 42px !important;
+    line-height: 42px !important;
+    background-color: #001f4d !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    padding: 0 15px !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
+    -webkit-appearance: menulist !important;
+    /* Standart menü görünümü */
+    appearance: menulist !important;
 }
 
 .smarttm-select:focus {
-    outline: none;
-    border-color: var(--smarttm-primary);
-    background-color: rgba(255, 255, 255, 0.12);
+    outline: none !important;
+    border-color: #EFAB14 !important;
+    box-shadow: 0 0 0 4px rgba(239, 171, 20, 0.2) !important;
 }
 
 .smarttm-select option {
-    background: var(--smarttm-dark);
-    color: var(--smarttm-white);
+    background-color: #00122e !important;
+    color: #ffffff !important;
+    padding: 12px !important;
+    font-size: 14px !important;
 }
 
-/* ===== QUICK FILTERS ===== */
+/* Chrome/Edge için seçili metin düzeltmesi */
+.smarttm-select:not([multiple]) {
+    vertical-align: middle !important;
+}
+
+/* Hızlı Filtre Butonları Güzelleştirmesi */
 .smarttm-quick-filters {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 12px;
 }
 
 .smarttm-quick-btn {
-    background: rgba(239, 171, 20, 0.15);
-    border: 1px solid rgba(239, 171, 20, 0.3);
-    border-radius: 20px;
-    padding: 6px 14px;
-    color: var(--smarttm-accent);
-    font-size: 12px;
-    font-weight: 500;
-    font-family: inherit;
-    cursor: pointer;
-    transition: var(--smarttm-transition);
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 50px !important;
+    padding: 8px 20px !important;
+    color: #ffffff !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
 }
 
 .smarttm-quick-btn:hover {
-    background: rgba(239, 171, 20, 0.25);
-    transform: translateY(-1px);
+    background: var(--smarttm-accent);
+    color: var(--smarttm-dark) !important;
+    border-color: var(--smarttm-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 171, 20, 0.3);
 }
 
-.smarttm-quick-btn:active {
-    transform: translateY(0);
-}
-
-/* ===== STATS BADGE ===== */
-.smarttm-stats {
-    font-size: 12px;
-    font-weight: 400;
-    color: rgba(255, 255, 255, 0.5);
-    margin-left: 8px;
+.smarttm-quick-btn.active {
+    background: var(--smarttm-accent);
+    color: var(--smarttm-dark);
 }
 
 .smarttm-filter-actions {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     justify-content: flex-end;
-    padding-top: 16px;
+    padding-top: 24px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 

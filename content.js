@@ -546,15 +546,29 @@
         // Quick filter buttons
         panel.querySelectorAll('.smarttm-quick-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                const filter = btn.dataset.filter;
-                applyQuickFilter(filter);
+                const isAlreadyActive = btn.classList.contains('active');
+
+                // Remove active class from all
+                panel.querySelectorAll('.smarttm-quick-btn').forEach(b => b.classList.remove('active'));
+
+                if (isAlreadyActive) {
+                    resetFilters();
+                } else {
+                    btn.classList.add('active');
+                    const filter = btn.dataset.filter;
+                    applyQuickFilter(filter);
+                }
             });
         });
 
         // Real-time filtering on input change
         const inputs = panel.querySelectorAll('input, select');
         inputs.forEach(input => {
-            input.addEventListener('change', applyFilters);
+            input.addEventListener('change', () => {
+                // If any input changes manually, remove active state from quick filters
+                panel.querySelectorAll('.smarttm-quick-btn').forEach(b => b.classList.remove('active'));
+                applyFilters();
+            });
         });
     }
 
