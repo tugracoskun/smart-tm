@@ -913,3 +913,9 @@ h3 {
   border-radius: var(--radius-full);
   border: 2px solid var(--dark-light);
 }
+
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}

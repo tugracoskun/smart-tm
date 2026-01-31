@@ -469,8 +469,43 @@ function setupEventListeners() {
       alert(error.message || 'İçe aktarma hatası!');
     }
 
-    // Reset file input
     e.target.value = '';
+  });
+
+  // SofaScore Import Button
+  document.getElementById('import-sofascore')?.addEventListener('click', async () => {
+    const btn = document.getElementById('import-sofascore');
+    btn.style.opacity = '0.5';
+
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab) return;
+
+      if (tab.url.includes('sofascore.com')) {
+        chrome.tabs.sendMessage(tab.id, { action: 'scanSofaScore' }, async (response) => {
+          btn.style.opacity = '1';
+          if (chrome.runtime.lastError) {
+            alert('Hata: Sayfaya erişilemedi. Lütfen sayfayı yenileyip tekrar deneyin.');
+            return;
+          }
+
+          if (response && response.success && response.data) {
+            await StorageManager.addToWatchlist(response.data);
+            alert(`${response.data.name} watchlist'e eklendi!`);
+            await loadWatchlist();
+          } else {
+            alert(response?.message || 'İçe aktarma başarısız.');
+          }
+        });
+      } else {
+        alert('Bu özellik sadece SofaScore profil sayfalarında çalışır.');
+        btn.style.opacity = '1';
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Beklenmeyen bir hata oluştu');
+      btn.style.opacity = '1';
+    }
   });
 }
 

@@ -32,7 +32,8 @@
     "*://*.transfermarkt.co.uk/*",
     "*://*.transfermarkt.es/*",
     "*://*.transfermarkt.fr/*",
-    "*://*.transfermarkt.it/*"
+    "*://*.transfermarkt.it/*",
+    "*://*.sofascore.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -55,6 +56,20 @@
         "storage.js",
         "utils.js",
         "content.js"
+      ],
+      "run_at": "document_end"
+    },
+    {
+      "matches": [
+        "*://*.sofascore.com/*"
+      ],
+      "css": [
+        "sofascore.css"
+      ],
+      "js": [
+        "storage.js",
+        "utils.js",
+        "sofascore.js"
       ],
       "run_at": "document_end"
     }

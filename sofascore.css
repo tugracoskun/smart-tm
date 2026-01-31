@@ -1,0 +1,108 @@
+/* Smart-TM SofaScore Entegrasyonu */
+
+/* Ana Buton Konteyner */
+.smarttm-sofa-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    margin-right: 8px;
+    z-index: 100;
+}
+
+/* Ana Trigger Butonu */
+.smarttm-sofa-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #0871B0 0%, #00193F 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    /* SofaScore tarzı */
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(8, 113, 176, 0.3);
+}
+
+.smarttm-sofa-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(8, 113, 176, 0.4);
+    border-color: #EFAB14;
+}
+
+.smarttm-sofa-btn svg {
+    width: 24px;
+    height: 24px;
+    color: #fff;
+}
+
+/* Aksiyon Menüsü (Pop-out) */
+.smarttm-sofa-actions {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 10px;
+    background: #00193F;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px) scale(0.95);
+    transform-origin: top right;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    min-width: 160px;
+}
+
+.smarttm-sofa-wrapper.active .smarttm-sofa-actions {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+}
+
+/* Menü Öğeleri */
+.smarttm-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s ease;
+    width: 100%;
+    text-align: left;
+}
+
+.smarttm-action-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.smarttm-action-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Renkler */
+.smarttm-tm-link {
+    color: #49a5e6;
+}
+
+.smarttm-fav-btn {
+    color: #EFAB14;
+}
+
+.smarttm-fav-btn.added svg {
+    fill: #EFAB14;
+}
