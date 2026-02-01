@@ -61,6 +61,9 @@
                 // Cache transfers from this page initially
                 await cachePageTransfers();
 
+                // Profil sayfası geliştirmeleri
+                enhanceProfilePage();
+
                 // OTOMATİK TARAMA: Her 5 saniyede bir sayfayı kontrol et (Yeni transferler için)
                 setInterval(async () => {
                     await cachePageTransfers();
@@ -107,13 +110,16 @@
 
         const isTransfer = transferKeywords.some(keyword => url.includes(keyword));
 
+        // Check for player profile page
+        const isProfile = url.includes('/profil/spieler/');
+
         // Also check if there are player links and tables on the page (fallback)
         const hasPlayerLinks = document.querySelectorAll(CONFIG.selectors.playerLink).length > 0;
         const hasTables = document.querySelectorAll(CONFIG.selectors.transferTable).length > 0;
 
-        console.log('[Smart-TM] URL check:', isTransfer, 'Player links:', hasPlayerLinks, 'Tables:', hasTables);
+        console.log('[Smart-TM] URL check:', isTransfer, 'Is Profile:', isProfile, 'Player links:', hasPlayerLinks, 'Tables:', hasTables);
 
-        return isTransfer || (hasPlayerLinks && hasTables);
+        return isTransfer || isProfile || (hasPlayerLinks && hasTables);
     }
 
     // ===== TRANSFER CACHE ===== //
@@ -144,6 +150,95 @@
             await StorageManager.addToTransferCache(transfers, window.location.href);
             console.log(`[Smart-TM] Cached ${transfers.length} transfers from this page`);
         }
+    }
+
+    // ===== PROFILE PAGE ENHANCEMENTS ===== //
+
+    /**
+     * Enhances the single player profile page with SofaScore link
+     */
+    function enhanceProfilePage() {
+        // Sadece profil sayfalarında çalış
+        if (!window.location.href.includes('/profil/spieler/')) return;
+
+        const header = document.querySelector('h1.data-header__headline-wrapper');
+        if (!header || header.querySelector('.smarttm-profile-btn')) return;
+
+        // İsim Temizleme (#10 Koen Kostons -> Koen Kostons)
+        let rawName = header.textContent.trim();
+        // Numarayı temizle (örn: #10 )
+        let name = rawName.replace(/^#\d+\s+/, '').trim();
+
+        // Düzenleme ikonları varsa isimden onları da temizle
+        const icons = header.querySelectorAll('a, span');
+        icons.forEach(icon => {
+            name = name.replace(icon.textContent, '').trim();
+        });
+
+        // Takım Bulma
+        const clubLink = document.querySelector('.data-header__club a');
+        let team = clubLink ? clubLink.textContent.trim() : '';
+
+        // Takım ismini temizle (Arama başarısını artırır)
+        if (team) {
+            // "St. Étienne B" -> "Saint Étienne" dönüşümü
+            // B takımı, U19, II gibi ekleri at; St. kısaltmasını aç
+            team = team.replace(/\s+(B|II|U\d+|Res\.?)$/, '')
+                .replace(/St\./, 'Saint')
+                .trim();
+        }
+
+        // URL Oluştur (SofaScore için)
+        // Maç sonuçları yerine direkt profil gelmesi için 'inurl:player' ve '/football/' yapısını hedefliyoruz
+        const targetUrl = `https://www.google.com/search?q=${encodeURIComponent(name + ' ' + team + ' football site:sofascore.com inurl:player')}&btnI`;
+
+        // Buton Oluştur
+        const btn = Utils.createElement('a', {
+            className: 'smarttm-profile-btn',
+            href: targetUrl,
+            target: '_blank',
+            title: 'SofaScore Profili'
+        });
+
+        // SofaScore Logo/Icon Style
+        btn.style.cssText = `
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            background: #fff;
+            border: 1px solid #dce1e6;
+            border-radius: 50%;
+            margin-left: 10px;
+            cursor: pointer;
+            vertical-align: middle;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        `;
+
+        // SofaScore "S" Logo SVG (Basitleştirilmiş)
+        btn.innerHTML = `
+            <svg viewBox="0 0 24 24" style="width: 20px; height: 20px;">
+                <path fill="#2C5DFA" d="M3.7 12.6c0 1.3 1.1 2.4 2.4 2.4h9.8c1.3 0 2.4-1.1 2.4-2.4s-1.1-2.4-2.4-2.4H6.1c-1.3 0-2.4 1.1-2.4 2.4z"/>
+                <path fill="#2C5DFA" d="M17.9 6.6H8.1c-1.3 0-2.4 1.1-2.4 2.4s1.1 2.4 2.4 2.4h9.8c1.3 0 2.4-1.1 2.4-2.4s-1.1-2.4-2.4-2.4z"/>
+                <path fill="#2C5DFA" d="M3.7 18.6c0 1.3 1.1 2.4 2.4 2.4h9.8c1.3 0 2.4-1.1 2.4-2.4s-1.1-2.4-2.4-2.4H6.1c-1.3 0-2.4 1.1-2.4 2.4z"/>
+            </svg>
+        `;
+
+        btn.addEventListener('mouseenter', () => {
+            btn.style.transform = 'translateY(-2px)';
+            btn.style.boxShadow = '0 4px 8px rgba(44, 93, 250, 0.2)';
+            btn.style.borderColor = '#2C5DFA';
+        });
+
+        btn.addEventListener('mouseleave', () => {
+            btn.style.transform = 'translateY(0)';
+            btn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+            btn.style.borderColor = '#dce1e6';
+        });
+
+        header.appendChild(btn);
     }
 
     // ===== TRANSFER COLORS ===== //
