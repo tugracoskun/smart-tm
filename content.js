@@ -283,6 +283,62 @@
 
 
 
+        // 5. Not Alma Butonu
+        if (settings.notesModule) {
+            // Player ID'yi URL'den al
+            const playerId = window.location.href.match(/\/spieler\/(\d+)/)?.[1];
+
+            if (playerId) {
+                const noteBtn = Utils.createElement('button', {
+                    className: 'smarttm-profile-btn',
+                    title: 'Not Ekle/Düzenle'
+                });
+
+                noteBtn.style.cssText = `
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 32px;
+                    height: 32px;
+                    background: #fff;
+                    border: 1px solid #dce1e6;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                    padding: 4px;
+                    box-sizing: border-box;
+                    margin-left: 4px; 
+                `;
+
+                noteBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#EFAB14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                `;
+
+                noteBtn.addEventListener('mouseenter', () => {
+                    noteBtn.style.transform = 'translateY(-2px)';
+                    noteBtn.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+                    noteBtn.style.borderColor = '#EFAB14';
+                });
+                noteBtn.addEventListener('mouseleave', () => {
+                    noteBtn.style.transform = 'translateY(0)';
+                    noteBtn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+                    noteBtn.style.borderColor = '#dce1e6';
+                });
+
+                noteBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openNoteModal(playerId, name);
+                });
+
+                container.appendChild(noteBtn);
+            }
+        }
+
         header.appendChild(container);
     }
 
@@ -1019,6 +1075,155 @@
         document.getElementById('smarttm-type-free').checked = filter.transferTypes?.includes('Bedelsiz') ?? true;
 
         applyFilters();
+    }
+
+    /**
+     * Add note buttons to transfer list rows
+     */
+    async function addNoteButtons() {
+        const rows = document.querySelectorAll(CONFIG.selectors.transferRow);
+
+        // Get all notes to check which players have notes
+        const allNotes = await StorageManager.getNotes();
+
+        rows.forEach(row => {
+            const playerData = Utils.extractPlayerData(row);
+            if (!playerData || !playerData.id) return;
+
+            // Avoid duplicates
+            if (row.querySelector('.smarttm-note-btn')) return;
+
+            const nameLink = row.querySelector('a[href*="/profil/spieler/"]');
+            if (!nameLink) return;
+
+            const hasNote = !!allNotes[playerData.id];
+
+            const btn = Utils.createElement('span', {
+                className: 'smarttm-note-btn',
+                title: hasNote ? 'Notu Düzenle' : 'Not Ekle',
+                style: `
+                    cursor: pointer; 
+                    margin-left: 5px; 
+                    display: inline-flex; 
+                    vertical-align: middle;
+                    opacity: ${hasNote ? '1' : '0.3'};
+                    transition: opacity 0.2s;
+                `
+            });
+
+            btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="${hasNote ? '#EFAB14' : 'currentColor'}" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+
+            btn.addEventListener('mouseenter', () => { btn.style.opacity = '1'; });
+            btn.addEventListener('mouseleave', () => { if (!allNotes[playerData.id]) btn.style.opacity = '0.3'; });
+
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openNoteModal(playerData.id, playerData.name);
+            });
+
+            // Insert after name
+            nameLink.parentNode.insertBefore(btn, nameLink.nextSibling);
+        });
+    }
+
+    /**
+     * Open Note Modal
+     */
+    async function openNoteModal(playerId, playerName) {
+        // Varsa önce temizle
+        const existingModal = document.querySelector('.smarttm-modal-overlay');
+        if (existingModal) existingModal.remove();
+
+        const existingNote = await StorageManager.getNote(playerId);
+        const noteText = existingNote ? existingNote.text : '';
+
+        const overlay = Utils.createElement('div', { className: 'smarttm-modal-overlay' });
+
+        overlay.innerHTML = `
+            <div class="smarttm-modal">
+                <div class="smarttm-modal-header">
+                    <h3 class="smarttm-modal-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        Oyuncu Notu: ${playerName}
+                    </h3>
+                    <button class="smarttm-modal-close" title="Kapat">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div class="smarttm-modal-body">
+                    <textarea class="smarttm-note-textarea" placeholder="Bu oyuncu hakkında notlarınızı buraya yazın... (Örn: Güçlü sol ayak, hava hakimiyeti iyi, sözleşmesi bitiyor...)">${noteText}</textarea>
+                </div>
+                <div class="smarttm-modal-footer">
+                    <span class="smarttm-note-status"></span>
+                    <button class="smarttm-btn smarttm-btn-cancel">İptal</button>
+                    <button class="smarttm-btn smarttm-btn-save">Kaydet</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        // Animasyon için frame bekle
+        requestAnimationFrame(() => {
+            overlay.classList.add('active');
+        });
+
+        // Event Listeners
+        const closeBtn = overlay.querySelector('.smarttm-modal-close');
+        const cancelBtn = overlay.querySelector('.smarttm-btn-cancel');
+        const saveBtn = overlay.querySelector('.smarttm-btn-save');
+        const textarea = overlay.querySelector('.smarttm-note-textarea');
+        const status = overlay.querySelector('.smarttm-note-status');
+
+        const closeModal = () => {
+            overlay.classList.remove('active');
+            setTimeout(() => overlay.remove(), 250);
+        };
+
+        closeBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+
+        // Overlay'e tıklayınca kapat (Modal dışı)
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeModal();
+        });
+
+        saveBtn.addEventListener('click', async () => {
+            const newText = textarea.value.trim();
+            saveBtn.textContent = 'Kaydediliyor...';
+
+            try {
+                if (newText) {
+                    await StorageManager.saveNote(playerId, newText);
+                } else {
+                    await StorageManager.deleteNote(playerId);
+                }
+
+                status.textContent = 'Kaydedildi!';
+                status.style.color = '#4caf50';
+                saveBtn.textContent = 'Kaydet';
+
+                // Content script'i güncelle: Listede ikon rengini güncelle
+                if (settings.notesModule) addNoteButtons();
+
+                setTimeout(closeModal, 800);
+            } catch (err) {
+                console.error(err);
+                status.textContent = 'Hata oluştu!';
+                status.style.color = '#f44336';
+                saveBtn.textContent = 'Kaydet';
+            }
+        });
+
+        // Focus
+        textarea.focus();
     }
 
     // ===== START ===== //
