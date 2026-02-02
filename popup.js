@@ -751,17 +751,20 @@ function renderNotesItems(notesList) {
 /**
  * View Note Details
  */
+/**
+ * View Note Details
+ */
 function viewNoteDetails(note) {
   const listPanel = document.getElementById('notes-items');
   const searchBox = document.querySelector('#notes-panel .search-box');
   const detailsView = document.getElementById('note-details-view');
   const playerInfo = document.getElementById('note-detail-player-info');
   const content = document.getElementById('note-detail-content');
-  const link = document.getElementById('note-detail-link');
+  const actions = document.querySelector('.note-detail-actions');
 
   // Populate Data
   playerInfo.innerHTML = `
-        <div style="width: 50px; height: 60px; border-radius: 4px; overflow: hidden; background: rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center;">
+        <div style="width: 60px; height: 75px; border-radius: 4px; overflow: hidden; background: rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center; flex-shrink: 0;">
             ${note.imageUrl
       ? `<img src="${note.imageUrl}" alt="${note.playerName}" style="width: 100%; height: 100%; object-fit: cover;">`
       : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 24px; height: 24px; opacity: 0.5;">
@@ -770,14 +773,32 @@ function viewNoteDetails(note) {
                    </svg>`
     }
         </div>
-        <div>
-            <div style="font-size: 16px; font-weight: 700; color: #fff;">${note.playerName || 'Bilinmeyen Oyuncu'}</div>
-            <div style="font-size: 12px; color: rgba(255,255,255,0.5);">${new Date(note.updatedAt).toLocaleString('tr-TR')}</div>
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 4px;">
+            <div style="font-size: 16px; font-weight: 700; color: #fff; line-height: 1.2;">
+                ${note.playerName || 'Bilinmeyen Oyuncu'}
+            </div>
+            <div style="font-size: 11px; color: rgba(255,255,255,0.5);">
+                ${new Date(note.updatedAt).toLocaleString('tr-TR')}
+            </div>
+            <a href="https://www.transfermarkt.com.tr/s/profil/spieler/${note.id}" target="_blank" 
+               style="display: inline-flex; align-items: center; gap: 4px; color: #64b5f6; font-size: 11px; font-weight: 600; text-decoration: none; margin-top: 2px; transition: color 0.2s;">
+               Profile Git 
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10">
+                   <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                   <polyline points="15 3 21 3 21 9"></polyline>
+                   <line x1="10" y1="14" x2="21" y2="3"></line>
+               </svg>
+            </a>
         </div>
     `;
 
-  content.textContent = note.text;
-  link.href = `https://www.transfermarkt.com.tr/s/profil/spieler/${note.id}`;
+  // Content: Ensure wrapping
+  content.innerHTML = `
+        <div style="padding-right: 15px; height: 100%; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word;">${note.text}</div>
+    `;
+
+  // Hide actions since button moved up
+  if (actions) actions.style.display = 'none';
 
   // Switch Views
   listPanel.style.display = 'none';
