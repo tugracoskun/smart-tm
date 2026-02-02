@@ -16,19 +16,20 @@
     justify-content: center;
     width: 40px;
     height: 40px;
-    background: linear-gradient(135deg, #0871B0 0%, #00193F 100%);
+    background: #7A84FF;
+    /* SofaScore Default Color */
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     /* SofaScore tarzı */
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 2px 8px rgba(8, 113, 176, 0.3);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(122, 132, 255, 0.3);
 }
 
 .smarttm-sofa-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(8, 113, 176, 0.4);
-    border-color: #EFAB14;
+    filter: brightness(1.1);
+    box-shadow: 0 4px 12px rgba(122, 132, 255, 0.4);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 .smarttm-sofa-btn svg {
