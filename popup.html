@@ -231,6 +231,7 @@
         </div>
 
         <div class="watchlist-items" id="notes-items">
+          <!-- List items will be here -->
           <div class="empty-state">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -238,6 +239,30 @@
             </svg>
             <p>Henüz not yok</p>
             <span>Transfer listelerinde oyuncuların yanındaki kalem ikonuna tıklayarak not ekleyebilirsiniz.</span>
+          </div>
+        </div>
+
+        <!-- Note Details View (Hidden by default) -->
+        <div id="note-details-view" style="display: none; padding: 15px;">
+          <div class="note-detail-header"
+            style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px;">
+            <button id="note-back-btn" style="background:none; border:none; color:white; cursor:pointer;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <div id="note-detail-player-info" style="display: flex; align-items: center; gap: 10px;">
+              <!-- Image and Name injected via JS -->
+            </div>
+          </div>
+          <div id="note-detail-content"
+            style="white-space: pre-wrap; color: rgba(255,255,255,0.8); line-height: 1.6; font-size: 14px; min-height: 200px;">
+            <!-- Full note text -->
+          </div>
+          <div class="note-detail-actions"
+            style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+            <a id="note-detail-link" href="#" target="_blank" class="smarttm-btn-primary"
+              style="text-decoration:none; font-size: 13px; padding: 8px 16px;">Profile Git</a>
           </div>
         </div>
       </section>

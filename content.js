@@ -1131,6 +1131,22 @@
      * Open Note Modal
      */
     async function openNoteModal(playerId, playerName, triggerElement) {
+        // Try to find player image
+        let playerImage = null;
+
+        // Strategy 1: Look in the same row (Transfer list)
+        const row = triggerElement.closest('tr');
+        if (row) {
+            const imgEl = row.querySelector('img.bilderrahmen-fixed, img[title="' + playerName + '"]');
+            if (imgEl) playerImage = imgEl.src;
+        }
+
+        // Strategy 2: Look in Profile Header
+        if (!playerImage) {
+            const profileImg = document.querySelector('.data-header__profile-image, .modal-header__image');
+            if (profileImg) playerImage = profileImg.src;
+        }
+
         // Varsa önce temizle (Toggle etkisi)
         const existingModal = document.querySelector('.smarttm-note-popover');
         if (existingModal) {
@@ -1236,7 +1252,7 @@
 
             try {
                 if (newText) {
-                    await StorageManager.saveNote(playerId, newText, playerName);
+                    await StorageManager.saveNote(playerId, newText, playerName, playerImage);
                 } else {
                     await StorageManager.deleteNote(playerId);
                 }

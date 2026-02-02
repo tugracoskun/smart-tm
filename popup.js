@@ -681,37 +681,53 @@ function renderNotesItems(notesList) {
     return;
   }
 
-  container.innerHTML = notesList.map(note => `
+  container.innerHTML = notesList.map((note, index) => {
+    // Truncate text (first 2 lines or ~100 chars)
+    const previewText = note.text.length > 80
+      ? note.text.substring(0, 80) + '...'
+      : note.text.split('\n').slice(0, 2).join('\n') + (note.text.split('\n').length > 2 ? '...' : '');
+
+    return `
      <div class="watchlist-item" data-note-id="${note.id}" style="align-items: flex-start;">
-        <div class="player-info" style="width: 100%; flex: 1;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 5px; align-items: center;">
-                <span class="player-name" style="color: #EFAB14;">${note.playerName || 'Oyuncu #' + note.id}</span>
-                <span class="player-details">${new Date(note.updatedAt).toLocaleDateString('tr-TR')}</span>
-            </div>
-            <p style="font-size: 13px; color: rgba(255,255,255,0.7); margin-top: 5px; margin-bottom:0; white-space: pre-wrap; line-height: 1.4;">${note.text}</p>
+        <div class="player-avatar" style="width: 40px; height: 50px; margin-right: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 4px; background: rgba(255,255,255,0.05);">
+            ${note.imageUrl
+        ? `<img src="${note.imageUrl}" alt="${note.playerName}" style="width: 100%; height: 100%; object-fit: cover;">`
+        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 20px; height: 20px; opacity: 0.5;">
+                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                     <circle cx="12" cy="7" r="4"/>
+                   </svg>`
+      }
         </div>
-        <div class="player-actions" style="margin-left: 10px; margin-top: 0;">
-           <button class="btn-icon open-profile" title="Profile Git" data-url="https://www.transfermarkt.com.tr/s/profil/spieler/${note.id}">
-             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-              <polyline points="15 3 21 3 21 9"/>
-              <line x1="10" y1="14" x2="21" y2="3"/>
-            </svg>
+        <div class="player-info" style="width: 100%; flex: 1; min-width: 0;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px; align-items: center;">
+                <span class="player-name" style="color: #EFAB14; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${note.playerName || 'Oyuncu #' + note.id}</span>
+                <span class="player-details" style="font-size: 10px;">${new Date(note.updatedAt).toLocaleDateString('tr-TR')}</span>
+            </div>
+            <p style="font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 0; margin-bottom: 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${previewText}</p>
+        </div>
+        <div class="player-actions" style="margin-left: 10px; margin-top: 0; display: flex; flex-direction: column; gap: 4px;">
+           <button class="btn-icon view-note" title="Notu İncele" data-note-index="${index}">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+               <circle cx="12" cy="12" r="3"></circle>
+             </svg>
            </button>
            <button class="btn-icon delete-note" title="Notu Sil" data-note-id="${note.id}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
               <line x1="18" y1="6" x2="6" y2="18"/>
               <line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
            </button>
         </div>
      </div>
-    `).join('');
+    `;
+  }).join('');
 
   // Event listeners
-  container.querySelectorAll('.open-profile').forEach(btn => {
+  container.querySelectorAll('.view-note').forEach(btn => {
     btn.addEventListener('click', () => {
-      chrome.tabs.create({ url: btn.dataset.url });
+      const note = notesList[btn.dataset.noteIndex];
+      viewNoteDetails(note);
     });
   });
 
@@ -723,4 +739,61 @@ function renderNotesItems(notesList) {
       }
     });
   });
+
+  // Setup Back Button for Details View only once if not already done
+  const backBtn = document.getElementById('note-back-btn');
+  if (backBtn && !backBtn.hasAttribute('data-listener')) {
+    backBtn.addEventListener('click', hideNoteDetails);
+    backBtn.setAttribute('data-listener', 'true');
+  }
+}
+
+/**
+ * View Note Details
+ */
+function viewNoteDetails(note) {
+  const listPanel = document.getElementById('notes-items');
+  const searchBox = document.querySelector('#notes-panel .search-box');
+  const detailsView = document.getElementById('note-details-view');
+  const playerInfo = document.getElementById('note-detail-player-info');
+  const content = document.getElementById('note-detail-content');
+  const link = document.getElementById('note-detail-link');
+
+  // Populate Data
+  playerInfo.innerHTML = `
+        <div style="width: 50px; height: 60px; border-radius: 4px; overflow: hidden; background: rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center;">
+            ${note.imageUrl
+      ? `<img src="${note.imageUrl}" alt="${note.playerName}" style="width: 100%; height: 100%; object-fit: cover;">`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 24px; height: 24px; opacity: 0.5;">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                   </svg>`
+    }
+        </div>
+        <div>
+            <div style="font-size: 16px; font-weight: 700; color: #fff;">${note.playerName || 'Bilinmeyen Oyuncu'}</div>
+            <div style="font-size: 12px; color: rgba(255,255,255,0.5);">${new Date(note.updatedAt).toLocaleString('tr-TR')}</div>
+        </div>
+    `;
+
+  content.textContent = note.text;
+  link.href = `https://www.transfermarkt.com.tr/s/profil/spieler/${note.id}`;
+
+  // Switch Views
+  listPanel.style.display = 'none';
+  if (searchBox) searchBox.style.display = 'none';
+  detailsView.style.display = 'block';
+}
+
+/**
+ * Hide Note Details (Back to List)
+ */
+function hideNoteDetails() {
+  const listPanel = document.getElementById('notes-items');
+  const searchBox = document.querySelector('#notes-panel .search-box');
+  const detailsView = document.getElementById('note-details-view');
+
+  detailsView.style.display = 'none';
+  listPanel.style.display = 'block';
+  if (searchBox) searchBox.style.display = 'flex'; // Assuming flex, or match css
 }
