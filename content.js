@@ -155,14 +155,14 @@
     // ===== PROFILE PAGE ENHANCEMENTS ===== //
 
     /**
-     * Enhances the single player profile page with SofaScore link
+     * Enhances the single player profile page with SofaScore and other scout links
      */
     function enhanceProfilePage() {
         // Sadece profil sayfalarında çalış
         if (!window.location.href.includes('/profil/spieler/')) return;
 
         const header = document.querySelector('h1.data-header__headline-wrapper');
-        if (!header || header.querySelector('.smarttm-profile-btn')) return;
+        if (!header || header.querySelector('.smarttm-profile-actions')) return;
 
         // İsim Temizleme (#10 Koen Kostons -> Koen Kostons)
         let rawName = header.textContent.trim();
@@ -188,19 +188,80 @@
                 .trim();
         }
 
-        // URL Oluştur (SofaScore için)
-        // Maç sonuçları yerine direkt profil gelmesi için 'inurl:player' ve '/football/' yapısını hedefliyoruz
-        const targetUrl = `https://www.google.com/search?q=${encodeURIComponent(name + ' ' + team + ' football site:sofascore.com inurl:player')}&btnI`;
+        // Container Oluştur
+        const container = Utils.createElement('div', {
+            className: 'smarttm-profile-actions'
+        });
+        container.style.cssText = `
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 15px;
+            vertical-align: middle;
+        `;
 
-        // Buton Oluştur
+        // 1. SofaScore Butonu (Her zaman veya ayara bağlı - şu an varsayılan ekliyoruz)
+        const sofaUrl = `https://www.google.com/search?q=${encodeURIComponent(name + ' ' + team + ' football site:sofascore.com inurl:player')}&btnI`;
+        const sofaBtn = createProfileButton(
+            sofaUrl,
+            'SofaScore Profili',
+            '<img src="https://play-lh.googleusercontent.com/-ugB_WCn3_i63xmKBrKHmmxKst2oZbiZbHFvjECGeRyi58aCsRZ08whCaWBUOk34M_dS" alt="SofaScore" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">'
+        );
+        container.appendChild(sofaBtn);
+
+        // 2. YouTube Butonu
+        if (settings.scoutYoutube) {
+            const ytBtn = createProfileButton(
+                Utils.getYouTubeSearchUrl(name),
+                'YouTube\'da ara',
+                '<svg viewBox="0 0 24 24" fill="#FF0000"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>'
+            );
+            container.appendChild(ytBtn);
+        }
+
+        // 3. FBref Butonu
+        if (settings.scoutFbref) {
+            const fbBtn = createProfileButton(
+                Utils.getFBrefSearchUrl(name),
+                'FBref\'te ara',
+                '<img src="https://pbs.twimg.com/media/FgD8IVXXgAAuNZc.png" alt="FBref" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">'
+            );
+            container.appendChild(fbBtn);
+        }
+
+        // 4. WyScout Butonu
+        if (settings.scoutWyscout) {
+            const wsBtn = createProfileButton(
+                Utils.getWyScoutSearchUrl(name),
+                'WyScout\'ta ara',
+                '<svg viewBox="0 0 24 24" fill="#00bcd4"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>'
+            );
+            container.appendChild(wsBtn);
+        }
+
+        // 5. Instat Butonu
+        if (settings.scoutInstat) {
+            const inBtn = createProfileButton(
+                Utils.getInstatSearchUrl(name),
+                'Instat\'ta ara',
+                '<svg viewBox="0 0 24 24" fill="#4caf50"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>'
+            );
+            container.appendChild(inBtn);
+        }
+
+        header.appendChild(container);
+    }
+
+    /**
+     * Helper to create consistent profile buttons
+     */
+    function createProfileButton(url, title, iconHtml) {
         const btn = Utils.createElement('a', {
-            className: 'smarttm-profile-btn',
-            href: targetUrl,
+            href: url,
             target: '_blank',
-            title: 'SofaScore Profili'
+            title: title
         });
 
-        // SofaScore Logo/Icon Style
         btn.style.cssText = `
             display: inline-flex;
             align-items: center;
@@ -209,27 +270,20 @@
             height: 32px;
             background: #fff;
             border: 1px solid #dce1e6;
-            border-radius: 50%;
-            margin-left: 10px;
+            border-radius: 8px;
             cursor: pointer;
-            vertical-align: middle;
             transition: all 0.2s ease;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            padding: 4px;
+            box-sizing: border-box;
         `;
 
-        // SofaScore "S" Logo SVG (Basitleştirilmiş)
-        btn.innerHTML = `
-            <svg viewBox="0 0 24 24" style="width: 20px; height: 20px;">
-                <path fill="#2C5DFA" d="M3.7 12.6c0 1.3 1.1 2.4 2.4 2.4h9.8c1.3 0 2.4-1.1 2.4-2.4s-1.1-2.4-2.4-2.4H6.1c-1.3 0-2.4 1.1-2.4 2.4z"/>
-                <path fill="#2C5DFA" d="M17.9 6.6H8.1c-1.3 0-2.4 1.1-2.4 2.4s1.1 2.4 2.4 2.4h9.8c1.3 0 2.4-1.1 2.4-2.4s-1.1-2.4-2.4-2.4z"/>
-                <path fill="#2C5DFA" d="M3.7 18.6c0 1.3 1.1 2.4 2.4 2.4h9.8c1.3 0 2.4-1.1 2.4-2.4s-1.1-2.4-2.4-2.4H6.1c-1.3 0-2.4 1.1-2.4 2.4z"/>
-            </svg>
-        `;
+        btn.innerHTML = iconHtml;
 
         btn.addEventListener('mouseenter', () => {
             btn.style.transform = 'translateY(-2px)';
-            btn.style.boxShadow = '0 4px 8px rgba(44, 93, 250, 0.2)';
-            btn.style.borderColor = '#2C5DFA';
+            btn.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+            btn.style.borderColor = '#aaa';
         });
 
         btn.addEventListener('mouseleave', () => {
@@ -238,7 +292,7 @@
             btn.style.borderColor = '#dce1e6';
         });
 
-        header.appendChild(btn);
+        return btn;
     }
 
     // ===== TRANSFER COLORS ===== //
