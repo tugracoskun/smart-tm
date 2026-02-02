@@ -50,6 +50,13 @@
         </svg>
         Filtreler
       </button>
+      <button class="tab" data-tab="notes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+        </svg>
+        Notlar
+      </button>
       <button class="tab" data-tab="notifications">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -205,6 +212,32 @@
             </svg>
             <p>Kayıtlı filtre yok</p>
             <span>Transfermarkt sayfasındaki Smart Filters panelinden filtre kaydetebilirsiniz.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Notes Panel -->
+      <section class="panel" id="notes-panel">
+        <div class="panel-header">
+          <h2>Oyuncu Notları</h2>
+        </div>
+
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+          <input type="text" id="notes-search" placeholder="Notlarda ara...">
+        </div>
+
+        <div class="watchlist-items" id="notes-items">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+            <p>Henüz not yok</p>
+            <span>Transfer listelerinde oyuncuların yanındaki kalem ikonuna tıklayarak not ekleyebilirsiniz.</span>
           </div>
         </div>
       </section>

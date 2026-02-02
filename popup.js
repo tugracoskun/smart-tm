@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadFilters();
   await loadSettings();
   await loadNotificationSettings();
+  await loadNotes();
 
   // Set up event listeners
   setupEventListeners();
@@ -350,7 +351,33 @@ function setupEventListeners() {
     }, 300));
   }
 
+  // Notes search
+  const notesSearchInput = document.getElementById('notes-search');
+  if (notesSearchInput) {
+    notesSearchInput.addEventListener('input', debounce(async (e) => {
+      const query = e.target.value.toLowerCase();
+      const notes = await StorageManager.getNotes();
+
+      const notesList = [];
+      const noteKeys = Object.keys(notes);
+
+      for (const id of noteKeys) {
+        notesList.push({
+          id: id,
+          ...notes[id]
+        });
+      }
+
+      const filtered = query
+        ? notesList.filter(n => n.text.toLowerCase().includes(query))
+        : notesList;
+
+      renderNotesItems(filtered);
+    }, 300));
+  }
+
   // Settings toggles
+
   document.getElementById('setting-colors')?.addEventListener('change', async (e) => {
     await StorageManager.updateSettings({ transferColors: e.target.checked });
     notifyContentScript('settingsChanged');
@@ -612,4 +639,88 @@ function debounce(func, wait) {
     clearTimeout(timeout);
     timeout = setTimeout(later, wait);
   };
+}
+
+/**
+ * Load notes items
+ */
+async function loadNotes() {
+  const notes = await StorageManager.getNotes();
+  // Note: notes is an object { id: { text, updatedAt, playerName? } }
+
+  // Convert to array
+  const notesList = Object.keys(notes).map(id => ({
+    id,
+    ...notes[id]
+  }));
+
+  // Sort by updated at desc
+  notesList.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+  renderNotesItems(notesList);
+}
+
+/**
+ * Render notes items
+ */
+function renderNotesItems(notesList) {
+  const container = document.getElementById('notes-items');
+  if (!container) return; // Guard clause
+
+  if (notesList.length === 0) {
+    container.innerHTML = `
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+            <p>Henüz not yok</p>
+            <span>Transfer listelerinde oyuncuların yanındaki kalem ikonuna tıklayarak not ekleyebilirsiniz.</span>
+          </div>
+       `;
+    return;
+  }
+
+  container.innerHTML = notesList.map(note => `
+     <div class="watchlist-item" data-note-id="${note.id}" style="align-items: flex-start;">
+        <div class="player-info" style="width: 100%; flex: 1;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px; align-items: center;">
+                <span class="player-name" style="color: #EFAB14;">${note.playerName || 'Oyuncu #' + note.id}</span>
+                <span class="player-details">${new Date(note.updatedAt).toLocaleDateString('tr-TR')}</span>
+            </div>
+            <p style="font-size: 13px; color: rgba(255,255,255,0.7); margin-top: 5px; margin-bottom:0; white-space: pre-wrap; line-height: 1.4;">${note.text}</p>
+        </div>
+        <div class="player-actions" style="margin-left: 10px; margin-top: 0;">
+           <button class="btn-icon open-profile" title="Profile Git" data-url="https://www.transfermarkt.com.tr/s/profil/spieler/${note.id}">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+              <polyline points="15 3 21 3 21 9"/>
+              <line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+           </button>
+           <button class="btn-icon delete-note" title="Notu Sil" data-note-id="${note.id}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+           </button>
+        </div>
+     </div>
+    `).join('');
+
+  // Event listeners
+  container.querySelectorAll('.open-profile').forEach(btn => {
+    btn.addEventListener('click', () => {
+      chrome.tabs.create({ url: btn.dataset.url });
+    });
+  });
+
+  container.querySelectorAll('.delete-note').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (confirm('Notu silmek istediğinize emin misiniz?')) {
+        await StorageManager.deleteNote(btn.dataset.noteId);
+        loadNotes();
+      }
+    });
+  });
 }

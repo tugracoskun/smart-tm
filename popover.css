@@ -1,0 +1,114 @@
+/* Popover Animations */
+.smarttm-note-popover {
+    position: absolute;
+    width: 300px;
+    background: #0d1b2a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    z-index: 99999;
+    padding: 12px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    visibility: hidden;
+}
+
+.smarttm-note-popover.active {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+}
+
+/* Arrow */
+.smarttm-note-popover::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: -6px;
+    width: 12px;
+    height: 12px;
+    background: #0d1b2a;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    transform: rotate(45deg);
+}
+
+.smarttm-popover-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.smarttm-popover-title {
+    color: #8b9bb4;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.smarttm-popover-close {
+    background: none;
+    border: none;
+    color: #8b9bb4;
+    cursor: pointer;
+    padding: 2px;
+    display: flex;
+}
+
+.smarttm-popover-close:hover {
+    color: #fff;
+}
+
+.smarttm-popover-textarea {
+    width: 100%;
+    min-height: 100px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: #fff;
+    padding: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    resize: vertical;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.smarttm-popover-textarea:focus {
+    border-color: #EFAB14;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.smarttm-popover-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.smarttm-popover-status {
+    font-size: 12px;
+}
+
+.smarttm-btn-save-mini {
+    background: #EFAB14;
+    color: #0d1b2a;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.smarttm-btn-save-mini:hover {
+    background: #FFB74D;
+    transform: translateY(-1px);
+}

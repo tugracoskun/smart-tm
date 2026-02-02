@@ -200,10 +200,13 @@ const StorageManager = {
    * @param {string} noteText - Note content
    * @returns {Promise<void>}
    */
-  async saveNote(transferId, noteText) {
+  async saveNote(transferId, noteText, playerName = null) {
     const notes = await this.getNotes();
+    const existing = notes[transferId] || {};
+
     notes[transferId] = {
       text: noteText,
+      playerName: playerName || existing.playerName, // Keep existing name if not provided
       updatedAt: new Date().toISOString()
     };
     await this.set(this.KEYS.NOTES, notes);

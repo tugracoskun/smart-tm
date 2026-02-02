@@ -332,7 +332,7 @@
                 noteBtn.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    openNoteModal(playerId, name);
+                    openNoteModal(playerId, name, noteBtn);
                 });
 
                 container.appendChild(noteBtn);
@@ -1119,7 +1119,7 @@
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                openNoteModal(playerData.id, playerData.name);
+                openNoteModal(playerData.id, playerData.name, btn);
             });
 
             // Insert after name
@@ -1130,101 +1130,139 @@
     /**
      * Open Note Modal
      */
-    async function openNoteModal(playerId, playerName) {
-        // Varsa önce temizle
-        const existingModal = document.querySelector('.smarttm-modal-overlay');
-        if (existingModal) existingModal.remove();
+    async function openNoteModal(playerId, playerName, triggerElement) {
+        // Varsa önce temizle (Toggle etkisi)
+        const existingModal = document.querySelector('.smarttm-note-popover');
+        if (existingModal) {
+            const isSame = existingModal.dataset.playerId === playerId;
+            existingModal.remove();
+            document.removeEventListener('click', closePopoverOnClickOutside);
+            if (isSame) return; // Aynı butona ikinci kez basıldıysa kapat ve çık
+        }
 
         const existingNote = await StorageManager.getNote(playerId);
         const noteText = existingNote ? existingNote.text : '';
 
-        const overlay = Utils.createElement('div', { className: 'smarttm-modal-overlay' });
+        // Popover Container
+        const popover = Utils.createElement('div', {
+            className: 'smarttm-note-popover',
+            dataset: { playerId: playerId }
+        });
 
-        overlay.innerHTML = `
-            <div class="smarttm-modal">
-                <div class="smarttm-modal-header">
-                    <h3 class="smarttm-modal-title">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                        </svg>
-                        Oyuncu Notu: ${playerName}
-                    </h3>
-                    <button class="smarttm-modal-close" title="Kapat">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
-                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
-                    </button>
-                </div>
-                <div class="smarttm-modal-body">
-                    <textarea class="smarttm-note-textarea" placeholder="Bu oyuncu hakkında notlarınızı buraya yazın... (Örn: Güçlü sol ayak, hava hakimiyeti iyi, sözleşmesi bitiyor...)">${noteText}</textarea>
-                </div>
-                <div class="smarttm-modal-footer">
-                    <span class="smarttm-note-status"></span>
-                    <button class="smarttm-btn smarttm-btn-cancel">İptal</button>
-                    <button class="smarttm-btn smarttm-btn-save">Kaydet</button>
-                </div>
+        popover.innerHTML = `
+            <div class="smarttm-popover-header">
+                <span class="smarttm-popover-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                    not: <span style="color: #fff; font-weight: 600;">${playerName}</span>
+                </span>
+                <button class="smarttm-popover-close">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <textarea class="smarttm-popover-textarea" placeholder="Not yaz...">${noteText}</textarea>
+            <div class="smarttm-popover-footer">
+                <span class="smarttm-popover-status"></span>
+                <button class="smarttm-btn-save-mini">Kaydet</button>
             </div>
         `;
 
-        document.body.appendChild(overlay);
+        document.body.appendChild(popover);
 
-        // Animasyon için frame bekle
+        // Position Logic
+        const rect = triggerElement.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+
+        // Varsayılan: Butonun sağına aç
+        let top = rect.top + scrollTop;
+        let left = rect.right + scrollLeft + 10; // 10px boşluk
+
+        // Eğer ekranın sağına taşıyorsa, butonun soluna aç
+        if (left + 300 > window.innerWidth) {
+            left = rect.left + scrollLeft - 310;
+        }
+
+        // Eğer ekranın altına taşıyorsa, yukarı kaydır
+        if (top + 250 > window.innerHeight + scrollTop) {
+            top = (rect.bottom + scrollTop) - 250;
+        }
+
+        // Ensure it doesn't go off top
+        if (top < 0) top = 10;
+
+        popover.style.top = `${top}px`;
+        popover.style.left = `${left}px`;
+
+        // Animation
         requestAnimationFrame(() => {
-            overlay.classList.add('active');
+            popover.classList.add('active');
         });
 
         // Event Listeners
-        const closeBtn = overlay.querySelector('.smarttm-modal-close');
-        const cancelBtn = overlay.querySelector('.smarttm-btn-cancel');
-        const saveBtn = overlay.querySelector('.smarttm-btn-save');
-        const textarea = overlay.querySelector('.smarttm-note-textarea');
-        const status = overlay.querySelector('.smarttm-note-status');
+        const closeBtn = popover.querySelector('.smarttm-popover-close');
+        const saveBtn = popover.querySelector('.smarttm-btn-save-mini');
+        const textarea = popover.querySelector('.smarttm-popover-textarea');
+        const status = popover.querySelector('.smarttm-popover-status');
 
-        const closeModal = () => {
-            overlay.classList.remove('active');
-            setTimeout(() => overlay.remove(), 250);
-        };
+        function closePopover() {
+            popover.classList.remove('active');
+            document.removeEventListener('click', closePopoverOnClickOutside);
+            setTimeout(() => popover.remove(), 200);
+        }
 
-        closeBtn.addEventListener('click', closeModal);
-        cancelBtn.addEventListener('click', closeModal);
+        function closePopoverOnClickOutside(e) {
+            if (!popover.contains(e.target) && !triggerElement.contains(e.target)) {
+                closePopover();
+            }
+        }
 
-        // Overlay'e tıklayınca kapat (Modal dışı)
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) closeModal();
-        });
+        // Delay adding click listener to prevent immediate closing
+        setTimeout(() => {
+            document.addEventListener('click', closePopoverOnClickOutside);
+        }, 100);
+
+        closeBtn.addEventListener('click', closePopover);
 
         saveBtn.addEventListener('click', async () => {
             const newText = textarea.value.trim();
-            saveBtn.textContent = 'Kaydediliyor...';
+            const originalText = saveBtn.textContent;
+            saveBtn.textContent = '...';
 
             try {
                 if (newText) {
-                    await StorageManager.saveNote(playerId, newText);
+                    await StorageManager.saveNote(playerId, newText, playerName);
                 } else {
                     await StorageManager.deleteNote(playerId);
                 }
 
-                status.textContent = 'Kaydedildi!';
+                status.textContent = '✓';
                 status.style.color = '#4caf50';
                 saveBtn.textContent = 'Kaydet';
 
                 // Content script'i güncelle: Listede ikon rengini güncelle
                 if (settings.notesModule) addNoteButtons();
 
-                setTimeout(closeModal, 800);
+                setTimeout(() => {
+                    status.textContent = '';
+                    closePopover();
+                }, 500);
             } catch (err) {
                 console.error(err);
-                status.textContent = 'Hata oluştu!';
+                status.textContent = '!';
                 status.style.color = '#f44336';
-                saveBtn.textContent = 'Kaydet';
+                saveBtn.textContent = originalText;
             }
         });
 
-        // Focus
         textarea.focus();
     }
+
 
     // ===== START ===== //
 
