@@ -309,7 +309,10 @@ async function loadSettings() {
   const settings = await StorageManager.getSettings();
 
   document.getElementById('setting-colors').checked = settings.transferColors;
-  document.getElementById('setting-scout-buttons').checked = settings.scoutButtons;
+  document.getElementById('setting-scout-youtube').checked = settings.scoutYoutube;
+  document.getElementById('setting-scout-fbref').checked = settings.scoutFbref;
+  document.getElementById('setting-scout-wyscout').checked = settings.scoutWyscout;
+  document.getElementById('setting-scout-instat').checked = settings.scoutInstat;
   document.getElementById('setting-notes').checked = settings.notesModule;
 }
 
@@ -354,8 +357,23 @@ function setupEventListeners() {
     notifyContentScript('settingsChanged');
   });
 
-  document.getElementById('setting-scout-buttons')?.addEventListener('change', async (e) => {
-    await StorageManager.updateSettings({ scoutButtons: e.target.checked });
+  document.getElementById('setting-scout-youtube')?.addEventListener('change', async (e) => {
+    await StorageManager.updateSettings({ scoutYoutube: e.target.checked });
+    notifyContentScript('settingsChanged');
+  });
+
+  document.getElementById('setting-scout-fbref')?.addEventListener('change', async (e) => {
+    await StorageManager.updateSettings({ scoutFbref: e.target.checked });
+    notifyContentScript('settingsChanged');
+  });
+
+  document.getElementById('setting-scout-wyscout')?.addEventListener('change', async (e) => {
+    await StorageManager.updateSettings({ scoutWyscout: e.target.checked });
+    notifyContentScript('settingsChanged');
+  });
+
+  document.getElementById('setting-scout-instat')?.addEventListener('change', async (e) => {
+    await StorageManager.updateSettings({ scoutInstat: e.target.checked });
     notifyContentScript('settingsChanged');
   });
 

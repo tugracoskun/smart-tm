@@ -21,7 +21,12 @@ const StorageManager = {
     scoutButtons: true,
     notesModule: true,
     notifyWatchlist: true,
-    notifyLeagues: false
+    notifyLeagues: false,
+    // Scout Providers
+    scoutYoutube: true,
+    scoutFbref: true,
+    scoutWyscout: false,
+    scoutInstat: false
   },
 
   /**

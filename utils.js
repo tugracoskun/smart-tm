@@ -102,6 +102,7 @@ const Utils = {
     getYouTubeSearchUrl(name) { return `https://www.youtube.com/results?search_query=${encodeURIComponent(name + ' skills goals')}`; },
     getWyScoutSearchUrl(name) { return `https://wyscout.com/search/?q=${encodeURIComponent(name)}`; },
     getInstatSearchUrl(name) { return `https://football.instatscout.com/search?query=${encodeURIComponent(name)}`; },
+    getFBrefSearchUrl(name) { return `https://fbref.com/en/search/search.fcgi?search=${encodeURIComponent(name)}`; },
 
     createElement(tag, attrs = {}, children = null) {
         const el = document.createElement(tag);

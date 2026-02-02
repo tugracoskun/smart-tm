@@ -72,6 +72,21 @@
         const playerData = scrapePlayerData();
         if (!playerData) return false;
 
+        // Settings'i al (Senkron olamayacağı için IIFE veya async yapı lazım ama burası sync çağrılıyor observer tarafından)
+        // StorageManager.getSettings() promise döner.
+        // Bu yüzden UI oluşturmayı async yapıyoruz.
+
+        StorageManager.getSettings().then(settings => {
+            createInterface(targetContainer, playerData, settings);
+        });
+
+        return true;
+    }
+
+    function createInterface(targetContainer, playerData, settings) {
+        // Zaten ekli mi tekrar kontrol (async gecikme süresince eklenebilir)
+        if (targetContainer.querySelector('.smarttm-sofa-wrapper')) return;
+
         // 3. UI Oluştur
         const wrapper = document.createElement('div');
         wrapper.className = 'smarttm-sofa-wrapper';
@@ -119,6 +134,56 @@
       Watchlist'e Ekle
     `;
 
+        // Action 3: Scout Buttons Group
+        let activeScoutLinks = [];
+
+        if (settings.scoutYoutube) {
+            activeScoutLinks.push({ name: 'YouTube', url: Utils.getYouTubeSearchUrl(playerData.name), icon: '<path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>' });
+        }
+        if (settings.scoutFbref) {
+            activeScoutLinks.push({
+                name: 'FBref',
+                url: Utils.getFBrefSearchUrl(playerData.name),
+                customIcon: '<img src="https://cdn.ssref.net/req/202601281/logos/fb-logo.svg" alt="FBref" style="width: 20px; height: 20px; object-fit: contain;">'
+            });
+        }
+        if (settings.scoutWyscout) {
+            activeScoutLinks.push({ name: 'WyScout', url: Utils.getWyScoutSearchUrl(playerData.name), icon: '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>' });
+        }
+        if (settings.scoutInstat) {
+            activeScoutLinks.push({ name: 'Instat', url: Utils.getInstatSearchUrl(playerData.name), icon: '<path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>' });
+        }
+
+        if (activeScoutLinks.length > 0) {
+            const scoutGroup = document.createElement('div');
+            scoutGroup.className = 'smarttm-sofa-scout-group';
+            scoutGroup.style.cssText = 'border-top: 1px solid rgba(255,255,255,0.1); margin-top: 4px; padding-top: 4px;';
+
+            activeScoutLinks.forEach(item => {
+                const link = document.createElement('a');
+                link.className = 'smarttm-action-btn';
+                link.href = item.url;
+                link.target = '_blank';
+
+                let iconHtml;
+                if (item.customIcon) {
+                    iconHtml = item.customIcon;
+                } else {
+                    iconHtml = `<svg viewBox="0 0 24 24" fill="currentColor">${item.icon}</svg>`;
+                }
+
+                link.innerHTML = `
+                    ${iconHtml}
+                    ${item.name}
+                `;
+                scoutGroup.appendChild(link);
+            });
+            menu.appendChild(favBtn);
+            menu.appendChild(scoutGroup);
+        } else {
+            menu.appendChild(favBtn);
+        }
+
         // Watchlist durumunu kontrol et (Asenkron)
         checkWatchlistStatus(playerData.id, favBtn);
 
@@ -128,7 +193,6 @@
         });
 
         // Monte Et
-        menu.appendChild(favBtn);
         menu.appendChild(tmLink);
         wrapper.appendChild(mainBtn);
         wrapper.appendChild(menu);
@@ -146,8 +210,6 @@
 
         // Container'ın başına ekle (Compare butonunun soluna)
         targetContainer.insertBefore(wrapper, targetContainer.firstChild);
-
-        return true;
     }
 
     /**
@@ -155,25 +217,50 @@
      */
     function scrapePlayerData() {
         try {
-            // İsim genellikle bir h2 tag'indedir
-            const nameEl = document.querySelector('h2');
+            // İsim genellikle h2 tag'indedir, ancak bazen değişebilir.
+            // Priority: h2.sc- (yeni tasarım), h2 (genel), .minimized-header h2
+            const nameSelectors = ['h2', 'header h2', '.p-name'];
+            let nameEl = null;
+            for (const sel of nameSelectors) {
+                nameEl = document.querySelector(sel);
+                if (nameEl) break;
+            }
             const name = nameEl ? nameEl.textContent.trim() : null;
 
             if (!name) return null;
 
-            // Takım bilgisini bul (Breadcrumb veya logo yanındaki metin)
-            // Breadcrumb genelde: Football > Country > League > Team > Player
+            // Takım bilgisini bul
+            // Breadcrumb en güvenilir kaynak: Football > Country > League > Team > Player
             let team = '';
-            const breadcrumbs = document.querySelectorAll('nav ol li');
-            if (breadcrumbs.length >= 4) {
-                team = breadcrumbs[breadcrumbs.length - 2].textContent.trim();
+            const breadcrumbs = document.querySelectorAll('nav ol li, .sc-breadcrumb-list li');
+
+            if (breadcrumbs.length >= 2) {
+                // Sondan bir önceki eleman genellikle takımdır, son eleman oyuncu adıdır (bazen değişir)
+                // Breadcrumb yapısını kontrol et: "M. Icardi" son eleman ise, "Galatasaray" bir öncekidir.
+                // Bazen son eleman Current page (Squad) olabilir.
+
+                // En güvenli: Link içeren son breadcrumb item'ı takımdır (oyuncu adı linkli değildir genelde o sayfada)
+                // Ya da logo yanındaki metin.
+                const teamLink = document.querySelector('a[href*="/team/"]');
+                if (teamLink) {
+                    team = teamLink.textContent.trim();
+                } else if (breadcrumbs.length >= 4) {
+                    team = breadcrumbs[breadcrumbs.length - 2].textContent.trim();
+                }
+            }
+
+            // Fallback: Meta tags
+            if (!team) {
+                const title = document.title;
+                // Title format: Player Name Team Name videos...
+                // Bu zor olabilir, boş bırakmak yanlış tahmin yapmaktan iyidir.
             }
 
             // ID'yi URL'den al
             const urlParts = window.location.pathname.split('/');
             const id = 'ss_' + urlParts[urlParts.length - 1]; // ss_ prefix for SofaScore IDs
 
-            // Ekstra bilgiler (opsiyonel)
+            // Ekstra bilgiler
             const countryEl = document.querySelector('span[class*="country"]');
             const country = countryEl ? countryEl.textContent.trim() : '';
 
