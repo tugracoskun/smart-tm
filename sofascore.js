@@ -116,11 +116,7 @@
         tmLink.href = tmUrl;
         tmLink.target = '_blank';
         tmLink.innerHTML = `
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-        <polyline points="15 3 21 3 21 9"/>
-        <line x1="10" y1="14" x2="21" y2="3"/>
-      </svg>
+      <img src="https://upload.wikimedia.org/wikipedia/commons/f/fb/Transfermarkt_favicon.png" alt="TM" style="width: 18px; height: 18px; object-fit: contain;">
       Transfermarkt Profili
     `;
 
@@ -148,11 +144,13 @@
             });
         }
         if (settings.scoutWyscout) {
-            activeScoutLinks.push({ name: 'WyScout', url: Utils.getWyScoutSearchUrl(playerData.name), icon: '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>' });
+            activeScoutLinks.push({
+                name: 'WyScout',
+                url: Utils.getWyScoutSearchUrl(playerData.name),
+                customIcon: '<img src="https://play-lh.googleusercontent.com/DxEpOw_5RjzfyrNkCUDFGKxWL7s5o6p8bEnGz-rp2jwryENSXo4bjSJd37167mHD5w" alt="WyScout" style="width: 24px; height: 24px; object-fit: cover; border-radius: 4px;">'
+            });
         }
-        if (settings.scoutInstat) {
-            activeScoutLinks.push({ name: 'Instat', url: Utils.getInstatSearchUrl(playerData.name), icon: '<path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>' });
-        }
+
 
         if (activeScoutLinks.length > 0) {
             const scoutGroup = document.createElement('div');

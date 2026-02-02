@@ -25,8 +25,7 @@ const StorageManager = {
     // Scout Providers
     scoutYoutube: true,
     scoutFbref: true,
-    scoutWyscout: false,
-    scoutInstat: false
+    scoutWyscout: false
   },
 
   /**

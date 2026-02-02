@@ -17,47 +17,44 @@
     width: 40px;
     height: 40px;
     background: #7A84FF;
-    /* SofaScore Default Color */
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    /* SofaScore tarzı */
+    border-radius: 6px;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 2px 8px rgba(122, 132, 255, 0.3);
+    transition: filter 0.2s ease;
+    box-shadow: none;
 }
 
 .smarttm-sofa-btn:hover {
     filter: brightness(1.1);
-    box-shadow: 0 4px 12px rgba(122, 132, 255, 0.4);
     border-color: rgba(255, 255, 255, 0.3);
 }
 
 .smarttm-sofa-btn svg {
     width: 24px;
     height: 24px;
-    color: #fff;
+    color: #171C1F;
 }
 
 /* Aksiyon Menüsü (Pop-out) */
 .smarttm-sofa-actions {
     position: absolute;
-    top: 100%;
+    top: calc(100% + 12px);
     right: 0;
-    margin-top: 10px;
-    background: #00193F;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    width: 220px;
+    background: #171C1F;
+    border: 1px solid rgba(122, 132, 255, 0.15);
     border-radius: 12px;
-    padding: 6px;
+    padding: 8px;
     display: flex;
     flex-direction: column;
     gap: 4px;
     opacity: 0;
     visibility: hidden;
-    transform: translateY(-10px) scale(0.95);
+    transform: translateY(-10px) scale(0.98);
     transform-origin: top right;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-    min-width: 160px;
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
 }
 
 .smarttm-sofa-wrapper.active .smarttm-sofa-actions {
@@ -70,8 +67,8 @@
 .smarttm-action-btn {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
+    gap: 12px;
+    padding: 12px 16px;
     background: transparent;
     border: none;
     border-radius: 8px;
@@ -81,23 +78,38 @@
     font-weight: 500;
     cursor: pointer;
     text-decoration: none;
-    transition: background 0.2s ease;
+    transition: all 0.2s ease;
     width: 100%;
     text-align: left;
+    white-space: nowrap;
 }
 
 .smarttm-action-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(122, 132, 255, 0.1);
+    /* #7A84FF with opacity */
+    color: #7A84FF;
+    padding-left: 20px;
+    /* Slight movement animation */
 }
 
-.smarttm-action-btn svg {
+.smarttm-action-btn svg,
+.smarttm-action-btn img {
     width: 18px;
     height: 18px;
+    transition: transform 0.2s;
+}
+
+.smarttm-action-btn:hover svg,
+.smarttm-action-btn:hover img {
+    transform: scale(1.1);
 }
 
 /* Renkler */
 .smarttm-tm-link {
-    color: #49a5e6;
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    color: #7A84FF;
 }
 
 .smarttm-fav-btn {
