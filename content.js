@@ -303,40 +303,61 @@
     /**
      * Create scout buttons container
      */
+    /**
+     * Create scout buttons container
+     */
     function createScoutButtonsContainer(playerName) {
         const container = Utils.createElement('div', {
             className: 'smarttm-scout-buttons'
         });
 
         // YouTube button
-        const ytBtn = Utils.createElement('a', {
-            className: 'smarttm-scout-btn smarttm-youtube',
-            href: Utils.getYouTubeSearchUrl(playerName),
-            target: '_blank',
-            title: 'YouTube\'da ara'
-        });
-        ytBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`;
-        container.appendChild(ytBtn);
+        if (settings.scoutYoutube) {
+            const ytBtn = Utils.createElement('a', {
+                className: 'smarttm-scout-btn smarttm-youtube',
+                href: Utils.getYouTubeSearchUrl(playerName),
+                target: '_blank',
+                title: 'YouTube\'da ara'
+            });
+            ytBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`;
+            container.appendChild(ytBtn);
+        }
+
+        // FBref button
+        if (settings.scoutFbref) {
+            const fbBtn = Utils.createElement('a', {
+                className: 'smarttm-scout-btn smarttm-fbref',
+                href: Utils.getFBrefSearchUrl(playerName),
+                target: '_blank',
+                title: 'FBref\'te ara'
+            });
+            fbBtn.innerHTML = `<img src="https://pbs.twimg.com/media/FgD8IVXXgAAuNZc.png" alt="FBref" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">`;
+            container.appendChild(fbBtn);
+        }
 
         // WyScout button
-        const wsBtn = Utils.createElement('a', {
-            className: 'smarttm-scout-btn smarttm-wyscout',
-            href: Utils.getWyScoutSearchUrl(playerName),
-            target: '_blank',
-            title: 'WyScout\'ta ara'
-        });
-        wsBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>`;
-        container.appendChild(wsBtn);
+        if (settings.scoutWyscout) {
+            const wsBtn = Utils.createElement('a', {
+                className: 'smarttm-scout-btn smarttm-wyscout',
+                href: Utils.getWyScoutSearchUrl(playerName),
+                target: '_blank',
+                title: 'WyScout\'ta ara'
+            });
+            wsBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>`;
+            container.appendChild(wsBtn);
+        }
 
         // Instat button
-        const inBtn = Utils.createElement('a', {
-            className: 'smarttm-scout-btn smarttm-instat',
-            href: Utils.getInstatSearchUrl(playerName),
-            target: '_blank',
-            title: 'Instat\'ta ara'
-        });
-        inBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>`;
-        container.appendChild(inBtn);
+        if (settings.scoutInstat) {
+            const inBtn = Utils.createElement('a', {
+                className: 'smarttm-scout-btn smarttm-instat',
+                href: Utils.getInstatSearchUrl(playerName),
+                target: '_blank',
+                title: 'Instat\'ta ara'
+            });
+            inBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>`;
+            container.appendChild(inBtn);
+        }
 
         return container;
     }

@@ -144,7 +144,7 @@
             activeScoutLinks.push({
                 name: 'FBref',
                 url: Utils.getFBrefSearchUrl(playerData.name),
-                customIcon: '<img src="https://cdn.ssref.net/req/202601281/logos/fb-logo.svg" alt="FBref" style="width: 20px; height: 20px; object-fit: contain;">'
+                customIcon: '<img src="https://pbs.twimg.com/media/FgD8IVXXgAAuNZc.png" alt="FBref" style="width: 24px; height: 24px; object-fit: cover; border-radius: 4px;">'
             });
         }
         if (settings.scoutWyscout) {
