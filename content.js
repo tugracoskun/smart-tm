@@ -175,16 +175,55 @@
             name = name.replace(icon.textContent, '').trim();
         });
 
-        // Takım Bulma
-        const clubLink = document.querySelector('.data-header__club a');
-        let team = clubLink ? clubLink.textContent.trim() : '';
+        // Takım Bulma (Daha sağlam yöntem)
+        let team = '';
 
-        // Takım ismini temizle (Arama başarısını artırır)
+        // 1. Yöntem: Logo üzerindeki title/alt bilgisini al (Genelde tam isim yazar: "Sheffield Wednesday")
+        const clubLogo = document.querySelector('.data-header__box__club-link img, .data-header__club-image img');
+        if (clubLogo) {
+            team = clubLogo.getAttribute('title') || clubLogo.getAttribute('alt') || '';
+        }
+
+        // 2. Yöntem: Eğer logo yoksa metinden al (Kısaltmalı olabilir: "Sheff Wed")
+        if (!team) {
+            const clubLink = document.querySelector('.data-header__club a');
+            if (clubLink) team = clubLink.textContent.trim();
+        }
+
+        // Takım ismini temizle ve normalize et
         if (team) {
-            // "St. Étienne B" -> "Saint Étienne" dönüşümü
-            // B takımı, U19, II gibi ekleri at; St. kısaltmasını aç
-            team = team.replace(/\s+(B|II|U\d+|Res\.?)$/, '')
-                .replace(/St\./, 'Saint')
+            // Yaygın kısaltmaları aç
+            const lowerTeam = team.toLowerCase();
+            const replacements = {
+                'sheff wed': 'Sheffield Wednesday',
+                'sheff utd': 'Sheffield United',
+                'man utd': 'Manchester United',
+                'man city': 'Manchester City',
+                'nottm forest': 'Nottingham Forest',
+                'wolves': 'Wolverhampton Wanderers',
+                'bor. m\'gladbach': 'Borussia Mönchengladbach',
+                'm\'gladbach': 'Borussia Mönchengladbach',
+                'b. dortmund': 'Borussia Dortmund',
+                'b. leverkusen': 'Bayer Leverkusen',
+                'a. madrid': 'Atletico Madrid',
+                'r. madrid': 'Real Madrid',
+                'sp. lisbon': 'Sporting CP',
+                'qpr': 'Queens Park Rangers',
+                'wba': 'West Bromwich Albion',
+                'pne': 'Preston North End'
+            };
+
+            // Tam eşleşme kontrolü 
+            for (const [abbr, full] of Object.entries(replacements)) {
+                if (lowerTeam.includes(abbr)) {
+                    team = full;
+                    break;
+                }
+            }
+
+            // Genel temizlik
+            team = team.replace(/\s+(B|II|U\d+|Res\.?|Juv\.?)$/i, '') // B takımı, U19, vb.
+                .replace(/^St\.\s/, 'Saint ') // St. -> Saint
                 .trim();
         }
 
@@ -200,8 +239,11 @@
             vertical-align: middle;
         `;
 
-        // 1. SofaScore Butonu (Her zaman veya ayara bağlı - şu an varsayılan ekliyoruz)
-        const sofaUrl = `https://www.google.com/search?q=${encodeURIComponent(name + ' ' + team + ' football site:sofascore.com inurl:player')}&btnI`;
+        // URL Oluştur (SofaScore için optimize edildi)
+        // Takım ismini kaldırıyoruz çünkü Google indexlemesi gecikebiliyor veya isim uyuşmazlığı olabiliyor.
+        // İsim + site:sofascore.com en güvenli yöntem.
+        const query = `${name} site:sofascore.com`;
+        const sofaUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&btnI`;
         const sofaBtn = createProfileButton(
             sofaUrl,
             'SofaScore Profili',
