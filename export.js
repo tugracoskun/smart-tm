@@ -48,6 +48,48 @@ const ExportManager = {
     },
 
     /**
+     * Export scout base to CSV file
+     */
+    async exportScoutBaseCSV() {
+        const base = await StorageManager.getScoutBase();
+
+        if (base.length === 0) {
+            alert('Scout Base boş! Dışa aktarılacak oyuncu yok.');
+            return;
+        }
+
+        const headers = [
+            'İsim',
+            'Yaş',
+            'Pozisyon',
+            'Uyruk',
+            'Kulüp',
+            'Piyasa Değeri',
+            'Eklenme Tarihi',
+            'Profil URL'
+        ];
+
+        const rows = base.map(player => [
+            player.name || '',
+            player.age || '',
+            player.position || '',
+            player.nationality || '',
+            player.club || '',
+            player.marketValue || '',
+            player.addedAt ? new Date(player.addedAt).toLocaleDateString('tr-TR') : '',
+            player.profileUrl || ''
+        ]);
+
+        const csvContent = [
+            headers.join(';'),
+            ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(';'))
+        ].join('\r\n');
+
+        const BOM = '\uFEFF';
+        this.downloadFile(BOM + csvContent, 'smart-tm-scout-base.csv', 'text/csv;charset=utf-8');
+    },
+
+    /**
      * Export all data to JSON file
      */
     async exportAllDataJSON() {
@@ -111,6 +153,9 @@ const ExportManager = {
                     if (data.data) {
                         if (data.data.watchlist) {
                             await StorageManager.set(StorageManager.KEYS.WATCHLIST, data.data.watchlist);
+                        }
+                        if (data.data.scoutBase) {
+                            await StorageManager.set(StorageManager.KEYS.SCOUT_BASE, data.data.scoutBase);
                         }
                         if (data.data.filters) {
                             await StorageManager.set(StorageManager.KEYS.FILTERS, data.data.filters);

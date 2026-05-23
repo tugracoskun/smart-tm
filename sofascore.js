@@ -12,6 +12,10 @@
 
     // Setup MutationObserver to handle dynamic content loading
     const observer = new MutationObserver((mutations) => {
+        if (typeof chrome === 'undefined' || !chrome.runtime?.id) {
+            observer.disconnect();
+            return;
+        }
         if (!isButtonInjected) {
             const targetFound = injectSmartButton();
             if (targetFound) {

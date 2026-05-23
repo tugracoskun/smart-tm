@@ -7,6 +7,7 @@ const StorageManager = {
   // Storage keys
   KEYS: {
     WATCHLIST: 'smarttm_watchlist',
+    SCOUT_BASE: 'smarttm_scout_base',
     FILTERS: 'smarttm_filters',
     NOTES: 'smarttm_notes',
     SETTINGS: 'smarttm_settings',
@@ -35,9 +36,21 @@ const StorageManager = {
    */
   async get(key) {
     return new Promise((resolve) => {
-      chrome.storage.local.get([key], (result) => {
-        resolve(result[key] || null);
-      });
+      if (typeof chrome === 'undefined' || !chrome.runtime?.id) {
+        resolve(null);
+        return;
+      }
+      try {
+        chrome.storage.local.get([key], (result) => {
+          if (chrome.runtime.lastError) {
+            resolve(null);
+          } else {
+            resolve(result ? result[key] : null);
+          }
+        });
+      } catch (e) {
+        resolve(null);
+      }
     });
   },
 
@@ -49,7 +62,20 @@ const StorageManager = {
    */
   async set(key, value) {
     return new Promise((resolve) => {
-      chrome.storage.local.set({ [key]: value }, resolve);
+      if (typeof chrome === 'undefined' || !chrome.runtime?.id) {
+        resolve();
+        return;
+      }
+      try {
+        chrome.storage.local.set({ [key]: value }, () => {
+          if (chrome.runtime.lastError) {
+            // Ignore error
+          }
+          resolve();
+        });
+      } catch (e) {
+        resolve();
+      }
     });
   },
 
@@ -60,7 +86,20 @@ const StorageManager = {
    */
   async remove(key) {
     return new Promise((resolve) => {
-      chrome.storage.local.remove([key], resolve);
+      if (typeof chrome === 'undefined' || !chrome.runtime?.id) {
+        resolve();
+        return;
+      }
+      try {
+        chrome.storage.local.remove([key], () => {
+          if (chrome.runtime.lastError) {
+            // Ignore error
+          }
+          resolve();
+        });
+      } catch (e) {
+        resolve();
+      }
     });
   },
 
@@ -70,7 +109,20 @@ const StorageManager = {
    */
   async clearAll() {
     return new Promise((resolve) => {
-      chrome.storage.local.clear(resolve);
+      if (typeof chrome === 'undefined' || !chrome.runtime?.id) {
+        resolve();
+        return;
+      }
+      try {
+        chrome.storage.local.clear(() => {
+          if (chrome.runtime.lastError) {
+            // Ignore error
+          }
+          resolve();
+        });
+      } catch (e) {
+        resolve();
+      }
     });
   },
 
@@ -222,6 +274,54 @@ const StorageManager = {
     const notes = await this.getNotes();
     delete notes[transferId];
     await this.set(this.KEYS.NOTES, notes);
+  },
+
+  // ===== SCOUT BASE METHODS =====
+
+  /**
+   * Get scout base players
+   * @returns {Promise<Array>}
+   */
+  async getScoutBase() {
+    const base = await this.get(this.KEYS.SCOUT_BASE);
+    return base || [];
+  },
+
+  /**
+   * Add player to scout base
+   * @param {Object} player - Player data
+   * @returns {Promise<void>}
+   */
+  async addToScoutBase(player) {
+    const base = await this.getScoutBase();
+    const exists = base.some(p => p.id === player.id);
+
+    if (!exists) {
+      player.addedAt = new Date().toISOString();
+      base.push(player);
+      await this.set(this.KEYS.SCOUT_BASE, base);
+    }
+  },
+
+  /**
+   * Remove player from scout base
+   * @param {string} playerId - Player ID
+   * @returns {Promise<void>}
+   */
+  async removeFromScoutBase(playerId) {
+    const base = await this.getScoutBase();
+    const filtered = base.filter(p => p.id !== playerId);
+    await this.set(this.KEYS.SCOUT_BASE, filtered);
+  },
+
+  /**
+   * Check if player is in scout base
+   * @param {string} playerId - Player ID
+   * @returns {Promise<boolean>}
+   */
+  async isInScoutBase(playerId) {
+    const base = await this.getScoutBase();
+    return base.some(p => p.id === playerId);
   },
 
   // ===== SETTINGS METHODS =====
@@ -407,8 +507,9 @@ const StorageManager = {
    * @returns {Promise<Object>}
    */
   async exportAllData() {
-    const [watchlist, filters, notes, settings, leagueRadar] = await Promise.all([
+    const [watchlist, scoutBase, filters, notes, settings, leagueRadar] = await Promise.all([
       this.getWatchlist(),
+      this.getScoutBase(),
       this.getFilters(),
       this.getNotes(),
       this.getSettings(),
@@ -420,6 +521,7 @@ const StorageManager = {
       version: '1.0.0',
       data: {
         watchlist,
+        scoutBase,
         filters,
         notes,
         settings,

@@ -787,3 +787,29 @@ tr.smarttm-free {
     background: #FFB74D;
     transform: translateY(-1px);
 }
+
+/* ===== SCOUT BASE BUTTONS ===== */
+.smarttm-base-btn {
+    width: 26px !important;
+    height: 26px !important;
+    background: none !important;
+    border: none !important;
+    color: rgba(255, 255, 255, 0.4) !important;
+    cursor: pointer;
+    vertical-align: middle;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    margin-left: 4px;
+    transition: all 0.2s ease;
+}
+
+.smarttm-base-btn:hover {
+    color: var(--smarttm-primary) !important;
+    transform: scale(1.1);
+}
+
+.smarttm-base-btn.active {
+    color: var(--smarttm-primary) !important;
+}

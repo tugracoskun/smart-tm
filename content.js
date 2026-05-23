@@ -41,15 +41,47 @@
                 if (request.action === 'scanPage') {
                     cachePageTransfers().then(count => {
                         sendResponse({ success: true, count: count });
+                    }).catch(err => {
+                        console.error('[Smart-TM] Error scanning page:', err);
+                        sendResponse({ success: false, error: err.message });
                     });
                     return true;
                 }
             });
 
             // Load data from storage
-            settings = await StorageManager.getSettings();
-            watchlist = await StorageManager.getWatchlist();
-            notes = await StorageManager.getNotes();
+            try {
+                if (typeof StorageManager !== 'undefined' && typeof StorageManager.getSettings === 'function') {
+                    settings = await StorageManager.getSettings();
+                } else {
+                    settings = {};
+                }
+            } catch (e) {
+                console.error('[Smart-TM] Error loading settings:', e);
+                settings = {};
+            }
+
+            try {
+                if (typeof StorageManager !== 'undefined' && typeof StorageManager.getWatchlist === 'function') {
+                    watchlist = await StorageManager.getWatchlist();
+                } else {
+                    watchlist = [];
+                }
+            } catch (e) {
+                console.error('[Smart-TM] Error loading watchlist:', e);
+                watchlist = [];
+            }
+
+            try {
+                if (typeof StorageManager !== 'undefined' && typeof StorageManager.getNotes === 'function') {
+                    notes = await StorageManager.getNotes();
+                } else {
+                    notes = {};
+                }
+            } catch (e) {
+                console.error('[Smart-TM] Error loading notes:', e);
+                notes = {};
+            }
 
             console.log('[Smart-TM] Settings loaded:', settings);
             console.log('[Smart-TM] Checking if transfer page...');
@@ -59,25 +91,70 @@
                 console.log('[Smart-TM] Initializing on transfer page...');
 
                 // Cache transfers from this page initially
-                await cachePageTransfers();
+                try {
+                    await cachePageTransfers();
+                } catch (e) {
+                    console.error('[Smart-TM] Error caching transfers:', e);
+                }
 
                 // Profil sayfası geliştirmeleri
-                enhanceProfilePage();
+                try {
+                    enhanceProfilePage();
+                } catch (e) {
+                    console.error('[Smart-TM] Error enhancing profile page:', e);
+                }
 
                 // OTOMATİK TARAMA: Her 5 saniyede bir sayfayı kontrol et (Yeni transferler için)
-                setInterval(async () => {
-                    await cachePageTransfers();
+                const cacheInterval = setInterval(async () => {
+                    if (typeof chrome === 'undefined' || !chrome.runtime?.id) {
+                        clearInterval(cacheInterval);
+                        return;
+                    }
+                    try {
+                        await cachePageTransfers();
+                    } catch (e) {
+                        console.error('[Smart-TM] Error in cache interval:', e);
+                    }
                 }, 5000);
 
                 // Apply enhancements
-                if (settings.transferColors) applyTransferColors();
-                if (settings.scoutButtons) addScoutButtons();
-                if (settings.notesModule) addNoteButtons();
-                addWatchlistButtons();
-                injectFilterPanel();
+                try {
+                    if (settings.transferColors) applyTransferColors();
+                } catch (e) {
+                    console.error('[Smart-TM] Error applying transfer colors:', e);
+                }
+                try {
+                    if (settings.scoutButtons) addScoutButtons();
+                } catch (e) {
+                    console.error('[Smart-TM] Error adding scout buttons:', e);
+                }
+                try {
+                    if (settings.notesModule) addNoteButtons();
+                } catch (e) {
+                    console.error('[Smart-TM] Error adding note buttons:', e);
+                }
+                try {
+                    addWatchlistButtons();
+                } catch (e) {
+                    console.error('[Smart-TM] Error adding watchlist buttons:', e);
+                }
+                try {
+                    addBaseButtons();
+                } catch (e) {
+                    console.error('[Smart-TM] Error adding base buttons:', e);
+                }
+                try {
+                    injectFilterPanel();
+                } catch (e) {
+                    console.error('[Smart-TM] Error injecting filter panel:', e);
+                }
 
                 // Set up MutationObserver for dynamic content
-                observePageChanges();
+                try {
+                    observePageChanges();
+                } catch (e) {
+                    console.error('[Smart-TM] Error observing page changes:', e);
+                }
 
                 isInitialized = true;
                 console.log('[Smart-TM] Initialization complete!');
@@ -337,6 +414,153 @@
 
                 container.appendChild(noteBtn);
             }
+        }
+
+        // 6. Scout Base Butonu
+        const playerId = window.location.href.match(/\/spieler\/(\d+)/)?.[1];
+        if (playerId) {
+            const baseBtn = Utils.createElement('button', {
+                className: 'smarttm-profile-btn smarttm-profile-base-btn',
+                title: 'Scout Base\'e Aktar'
+            });
+            baseBtn.style.cssText = `
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 32px;
+                height: 32px;
+                background: #fff;
+                border: 1px solid #dce1e6;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                padding: 4px;
+                box-sizing: border-box;
+                margin-left: 4px;
+            `;
+            
+            try {
+                if (typeof StorageManager !== 'undefined' && typeof StorageManager.isInScoutBase === 'function') {
+                    StorageManager.isInScoutBase(playerId).then(isInBase => {
+                        if (isInBase) {
+                            baseBtn.style.borderColor = 'var(--smarttm-primary)';
+                            baseBtn.style.background = 'rgba(8, 113, 176, 0.1)';
+                            baseBtn.title = 'Scout Base\'den Kaldır';
+                            baseBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="var(--smarttm-primary)" stroke-width="2" style="width: 20px; height: 20px;">
+                                <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                                <path d="M3 5v14a9 3 0 0 0 18 0V5"></path>
+                                <path d="M3 12a9 3 0 0 0 18 0"></path>
+                            </svg>`;
+                        } else {
+                            baseBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+                                <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                                <path d="M3 5v14a9 3 0 0 0 18 0V5"></path>
+                                <path d="M3 12a9 3 0 0 0 18 0"></path>
+                                <line x1="12" y1="10" x2="12" y2="16"></line><line x1="9" y1="13" x2="15" y2="13"></line>
+                            </svg>`;
+                        }
+                    }).catch(e => {
+                        console.error('[Smart-TM] Error checking isInScoutBase:', e);
+                    });
+                } else {
+                    baseBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+                        <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                        <path d="M3 5v14a9 3 0 0 0 18 0V5"></path>
+                        <path d="M3 12a9 3 0 0 0 18 0"></path>
+                        <line x1="12" y1="10" x2="12" y2="16"></line><line x1="9" y1="13" x2="15" y2="13"></line>
+                    </svg>`;
+                }
+            } catch (err) {
+                console.error('[Smart-TM] Error initializing profile base button state:', err);
+            }
+
+            baseBtn.addEventListener('mouseenter', () => {
+                baseBtn.style.transform = 'translateY(-2px)';
+                baseBtn.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+            });
+            baseBtn.addEventListener('mouseleave', () => {
+                baseBtn.style.transform = 'translateY(0)';
+                baseBtn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+            });
+
+            baseBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                try {
+                    if (typeof StorageManager === 'undefined' || typeof StorageManager.isInScoutBase !== 'function') {
+                        console.error('[Smart-TM] StorageManager methods are not defined');
+                        return;
+                    }
+                    const isInBase = await StorageManager.isInScoutBase(playerId);
+
+                    if (isInBase) {
+                        await StorageManager.removeFromScoutBase(playerId);
+                        baseBtn.style.borderColor = '#dce1e6';
+                        baseBtn.style.background = '#fff';
+                        baseBtn.title = 'Scout Base\'e Aktar';
+                        baseBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+                            <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                            <path d="M3 5v14a9 3 0 0 0 18 0V5"></path>
+                            <path d="M3 12a9 3 0 0 0 18 0"></path>
+                            <line x1="12" y1="10" x2="12" y2="16"></line><line x1="9" y1="13" x2="15" y2="13"></line>
+                        </svg>`;
+                    } else {
+                        let club = '';
+                        const clubLogo = document.querySelector('.data-header__box__club-link img, .data-header__club-image img');
+                        if (clubLogo) club = clubLogo.getAttribute('title') || clubLogo.getAttribute('alt') || '';
+                        
+                        let position = '';
+                        const posEl = document.querySelector('.data-header__details-item--position');
+                        if (posEl) position = posEl.textContent.replace('Mevki:', '').trim();
+
+                        let age = '';
+                        const ageEl = document.querySelector('.data-header__details-item--age, .data-header__details-item--birthdate');
+                        if (ageEl) {
+                            const m = ageEl.textContent.match(/\((\d+)\)/) || ageEl.textContent.match(/(\d+)\s+yaş/);
+                            if (m) age = parseInt(m[1]);
+                            else age = parseInt(ageEl.textContent.match(/\d+/)?.[0]) || '';
+                        }
+
+                        let nat = '';
+                        const natEl = document.querySelector('.data-header__details-item--country img, .data-header__country img');
+                        if (natEl) nat = natEl.title || natEl.alt || '';
+
+                        let mv = '';
+                        const mvEl = document.querySelector('.data-header__market-value, .data-header__last-market-value');
+                        if (mvEl) mv = mvEl.textContent.split('\n')[0].trim();
+
+                        const pData = {
+                            id: playerId,
+                            name: name,
+                            profileUrl: window.location.href,
+                            age: age,
+                            position: position,
+                            nationality: nat,
+                            marketValue: mv,
+                            club: club
+                        };
+                        
+                        const pImg = document.querySelector('.data-header__profile-image img, .modal-header__image img, img.bilderrahmen-fixed');
+                        if (pImg) pData.imageUrl = pImg.src;
+
+                        await StorageManager.addToScoutBase(pData);
+                        baseBtn.style.borderColor = 'var(--smarttm-primary)';
+                        baseBtn.style.background = 'rgba(8, 113, 176, 0.1)';
+                        baseBtn.title = 'Scout Base\'den Kaldır';
+                        baseBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="var(--smarttm-primary)" stroke-width="2" style="width: 20px; height: 20px;">
+                            <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                            <path d="M3 5v14a9 3 0 0 0 18 0V5"></path>
+                            <path d="M3 12a9 3 0 0 0 18 0"></path>
+                        </svg>`;
+                    }
+                } catch (err) {
+                    console.error('[Smart-TM] Error toggling scout base from profile:', err);
+                }
+            });
+
+            container.appendChild(baseBtn);
         }
 
         header.appendChild(container);
@@ -640,6 +864,101 @@
                 nameCell.insertBefore(btn, nameCell.firstChild);
             }
         });
+    }
+
+    /**
+     * Her oyuncu satırına Scout Base aktarma butonunu ekler
+     */
+    async function addBaseButtons() {
+        if (typeof StorageManager === 'undefined' || typeof StorageManager.getScoutBase !== 'function') {
+            console.warn('[Smart-TM] StorageManager or getScoutBase is not defined. Skipping addBaseButtons.');
+            return;
+        }
+
+        try {
+            const rows = document.querySelectorAll(CONFIG.selectors.transferRow);
+            const base = await StorageManager.getScoutBase();
+
+            rows.forEach(row => {
+                if (row.querySelector('.smarttm-base-btn')) return;
+
+                const playerData = Utils.extractPlayerData(row);
+                if (!playerData || !playerData.id) return;
+
+                const isInBase = base.some(p => p.id === playerData.id);
+
+                const btn = Utils.createElement('button', {
+                    className: `smarttm-base-btn ${isInBase ? 'active' : ''}`,
+                    title: isInBase ? 'Scout Base\'den Kaldır' : 'Scout Base\'e Aktar',
+                    dataset: { playerId: playerData.id }
+                });
+                
+                // Database icon
+                btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; display: block;">
+                    <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                    <path d="M3 5v14a9 3 0 0 0 18 0V5"></path>
+                    <path d="M3 12a9 3 0 0 0 18 0"></path>
+                    ${isInBase ? '' : '<line x1="12" y1="10" x2="12" y2="16"></line><line x1="9" y1="13" x2="15" y2="13"></line>'}
+                </svg>`;
+
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+
+                    try {
+                        if (typeof StorageManager === 'undefined' || typeof StorageManager.getScoutBase !== 'function') {
+                            console.error('[Smart-TM] StorageManager methods are not defined');
+                            return;
+                        }
+                        const currentBase = await StorageManager.getScoutBase();
+                        const alreadyInBase = currentBase.some(p => p.id === playerData.id);
+
+                        if (alreadyInBase) {
+                            await StorageManager.removeFromScoutBase(playerData.id);
+                            btn.classList.remove('active');
+                            btn.title = 'Scout Base\'e Aktar';
+                            btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; display: block;">
+                                <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                                <path d="M3 5v14a9 3 0 0 0 18 0V5"></path>
+                                <path d="M3 12a9 3 0 0 0 18 0"></path>
+                                <line x1="12" y1="10" x2="12" y2="16"></line><line x1="9" y1="13" x2="15" y2="13"></line>
+                            </svg>`;
+                        } else {
+                            const clubLogo = row.querySelector('img.verein-flagge, img.tiny-verein-flagge');
+                            playerData.club = clubLogo ? (clubLogo.title || clubLogo.alt) : '';
+                            
+                            const playerImg = row.querySelector('img.bilderrahmen-fixed');
+                            if (playerImg) playerData.imageUrl = playerImg.src;
+
+                            await StorageManager.addToScoutBase(playerData);
+                            btn.classList.add('active');
+                            btn.title = 'Scout Base\'den Kaldır';
+                            btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="var(--smarttm-primary)" stroke-width="2" style="width: 14px; height: 14px; display: block;">
+                                <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                                <path d="M3 5v14a9 3 0 0 0 18 0V5"></path>
+                                <path d="M3 12a9 3 0 0 0 18 0"></path>
+                            </svg>`;
+                        }
+                    } catch (err) {
+                        console.error('[Smart-TM] Error toggling scout base:', err);
+                    }
+                });
+
+                // İsmin olduğu hücrenin başına (Watchlist butonunun yanına) ekle
+                const playerLink = row.querySelector('a[href*="/profil/spieler/"]');
+                const nameCell = playerLink ? playerLink.closest('td') : null;
+                if (nameCell) {
+                    const starBtn = nameCell.querySelector('.smarttm-watchlist-btn');
+                    if (starBtn) {
+                        nameCell.insertBefore(btn, starBtn.nextSibling);
+                    } else {
+                        nameCell.insertBefore(btn, nameCell.firstChild);
+                    }
+                }
+            });
+        } catch (err) {
+            console.error('[Smart-TM] Error adding base buttons:', err);
+        }
     }
 
     // ===== FILTER PANEL ===== //
@@ -1007,6 +1326,10 @@
      */
     function observePageChanges() {
         const observer = new MutationObserver(Utils.debounce((mutations) => {
+            if (typeof chrome === 'undefined' || !chrome.runtime?.id) {
+                observer.disconnect();
+                return;
+            }
             let shouldReapply = false;
 
             mutations.forEach(mutation => {
@@ -1021,10 +1344,11 @@
 
             if (shouldReapply) {
                 console.log('[Smart-TM] Detected new content, reapplying enhancements...');
-                if (settings.transferColors) applyTransferColors();
-                if (settings.scoutButtons) addScoutButtons();
-                if (settings.notesModule) addNoteButtons();
-                addWatchlistButtons();
+                try { if (settings.transferColors) applyTransferColors(); } catch (e) { console.error('[Smart-TM] Error applying transfer colors:', e); }
+                try { if (settings.scoutButtons) addScoutButtons(); } catch (e) { console.error('[Smart-TM] Error adding scout buttons:', e); }
+                try { if (settings.notesModule) addNoteButtons(); } catch (e) { console.error('[Smart-TM] Error adding note buttons:', e); }
+                try { addWatchlistButtons(); } catch (e) { console.error('[Smart-TM] Error adding watchlist buttons:', e); }
+                try { addBaseButtons(); } catch (e) { console.error('[Smart-TM] Error adding base buttons:', e); }
             }
         }, 500));
 
@@ -1052,20 +1376,54 @@
      * Reload settings and reapply enhancements
      */
     async function loadSettingsAndReapply() {
-        settings = await StorageManager.getSettings();
+        try {
+            if (typeof StorageManager !== 'undefined' && typeof StorageManager.getSettings === 'function') {
+                settings = await StorageManager.getSettings();
+            } else {
+                settings = {};
+            }
+        } catch (e) {
+            console.error('[Smart-TM] Error loading settings in reapply:', e);
+            settings = {};
+        }
 
         // Remove existing enhancements and reapply
-        document.querySelectorAll('.smarttm-scout-buttons, .smarttm-note-btn, .smarttm-watchlist-btn').forEach(el => el.remove());
-        document.querySelectorAll('.smarttm-colored').forEach(row => {
-            row.style.backgroundColor = '';
-            row.style.borderLeft = '';
-            row.classList.remove('smarttm-colored', 'smarttm-loan', 'smarttm-permanent', 'smarttm-free');
-        });
+        try {
+            document.querySelectorAll('.smarttm-scout-buttons, .smarttm-note-btn, .smarttm-watchlist-btn, .smarttm-base-btn').forEach(el => el.remove());
+            document.querySelectorAll('.smarttm-colored').forEach(row => {
+                row.style.backgroundColor = '';
+                row.style.borderLeft = '';
+                row.classList.remove('smarttm-colored', 'smarttm-loan', 'smarttm-permanent', 'smarttm-free');
+            });
+        } catch (e) {
+            console.error('[Smart-TM] Error cleaning enhancements in reapply:', e);
+        }
 
-        if (settings.transferColors) applyTransferColors();
-        if (settings.scoutButtons) addScoutButtons();
-        if (settings.notesModule) addNoteButtons();
-        addWatchlistButtons();
+        try {
+            if (settings.transferColors) applyTransferColors();
+        } catch (e) {
+            console.error('[Smart-TM] Error applying transfer colors in reapply:', e);
+        }
+        try {
+            if (settings.scoutButtons) addScoutButtons();
+        } catch (e) {
+            console.error('[Smart-TM] Error adding scout buttons in reapply:', e);
+        }
+        try {
+            if (settings.notesModule) addNoteButtons();
+        } catch (e) {
+            console.error('[Smart-TM] Error adding note buttons in reapply:', e);
+        }
+        try {
+            addWatchlistButtons();
+        } catch (e) {
+            console.error('[Smart-TM] Error adding watchlist buttons in reapply:', e);
+        }
+        try {
+            addBaseButtons();
+        } catch (e) {
+            console.error('[Smart-TM] Error adding base buttons in reapply:', e);
+        }
     }
 
     /**

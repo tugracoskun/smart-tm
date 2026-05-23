@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Initialize
   await initTabs();
   await loadWatchlist();
-  await loadSearchPanel();
+  await loadScoutBase();
   await loadFilters();
   await loadSettings();
   await loadNotificationSettings();
@@ -110,106 +110,173 @@ async function loadWatchlist() {
 }
 
 /**
- * Load and initialize the global search panel
+ * Load and initialize the scout base panel
  */
-async function loadSearchPanel() {
-  const cacheOptions = await StorageManager.getCacheFilterOptions();
+async function loadScoutBase() {
+  const base = await StorageManager.getScoutBase();
 
-  // Update stats
-  document.getElementById('cache-count').textContent = cacheOptions.totalTransfers;
-  document.getElementById('total-cached').textContent = cacheOptions.totalTransfers;
-  document.getElementById('pages-scanned').textContent = cacheOptions.pagesScanned;
+  // Update badge
+  const countBadge = document.getElementById('base-count');
+  if (countBadge) countBadge.textContent = base.length;
+
+  // Extract unique positions and nationalities from base to populate selects
+  const positions = new Set();
+  const nationalities = new Set();
+
+  base.forEach(p => {
+    if (p.position) positions.add(p.position);
+    if (p.nationality) nationalities.add(p.nationality);
+  });
 
   // Populate position dropdown
-  const positionSelect = document.getElementById('search-position');
+  const positionSelect = document.getElementById('base-position');
   if (positionSelect) {
     positionSelect.innerHTML = '<option value="">Tümü</option>' +
-      cacheOptions.positions.map(p => `<option value="${p}">${p}</option>`).join('');
+      Array.from(positions).sort().map(p => `<option value="${p}">${p}</option>`).join('');
   }
 
   // Populate nationality dropdown
-  const nationalitySelect = document.getElementById('search-nationality');
+  const nationalitySelect = document.getElementById('base-nationality');
   if (nationalitySelect) {
     nationalitySelect.innerHTML = '<option value="">Tümü</option>' +
-      cacheOptions.nationalities.map(n => `<option value="${n}">${n}</option>`).join('');
+      Array.from(nationalities).sort().map(n => `<option value="${n}">${n}</option>`).join('');
   }
 
-  // If there are cached transfers, show initial results
-  if (cacheOptions.totalTransfers > 0) {
-    await performSearch();
-  }
+  await performBaseFilter();
 }
 
 /**
- * Perform search on cached transfers
+ * Filter and sort local scout base
  */
-async function performSearch() {
-  const filters = {
-    position: document.getElementById('search-position')?.value || '',
-    nationality: document.getElementById('search-nationality')?.value || '',
-    ageMin: parseInt(document.getElementById('search-age-min')?.value) || null,
-    ageMax: parseInt(document.getElementById('search-age-max')?.value) || null
-  };
+async function performBaseFilter() {
+  const base = await StorageManager.getScoutBase();
+  
+  const textQuery = document.getElementById('base-search')?.value.toLowerCase() || '';
+  const selectedPosition = document.getElementById('base-position')?.value || '';
+  const selectedNationality = document.getElementById('base-nationality')?.value || '';
+  const ageMin = parseInt(document.getElementById('base-age-min')?.value) || 0;
+  const ageMax = parseInt(document.getElementById('base-age-max')?.value) || Infinity;
+  const sortValue = document.getElementById('base-sort')?.value || '';
 
-  // Handle sorting
-  const sortValue = document.getElementById('search-sort')?.value || '';
+  let filtered = base.filter(player => {
+    // Text search
+    if (textQuery && !player.name.toLowerCase().includes(textQuery)) return false;
+    
+    // Position
+    if (selectedPosition && player.position !== selectedPosition) return false;
+    
+    // Nationality
+    if (selectedNationality && player.nationality !== selectedNationality) return false;
+    
+    // Age
+    const age = parseInt(player.age) || 0;
+    if (ageMin && age < ageMin) return false;
+    if (ageMax && age > ageMax) return false;
+
+    return true;
+  });
+
+  // Sort
   if (sortValue) {
-    const [sortBy, sortDirection] = sortValue.split('-');
-    filters.sortBy = sortBy;
-    filters.sortDirection = sortDirection;
+    filtered.sort((a, b) => {
+      if (sortValue === 'name-asc') {
+        return a.name.localeCompare(b.name);
+      } else if (sortValue === 'name-desc') {
+        return b.name.localeCompare(a.name);
+      } else if (sortValue === 'age-asc') {
+        return (parseInt(a.age) || 0) - (parseInt(b.age) || 0);
+      } else if (sortValue === 'age-desc') {
+        return (parseInt(b.age) || 0) - (parseInt(a.age) || 0);
+      } else if (sortValue === 'value-desc') {
+        const valA = Utils.parseMarketValue(a.marketValue) || 0;
+        const valB = Utils.parseMarketValue(b.marketValue) || 0;
+        return valB - valA;
+      }
+      return 0;
+    });
+  } else {
+    // Default: Sort by added date desc
+    filtered.sort((a, b) => new Date(b.addedAt || 0) - new Date(a.addedAt || 0));
   }
 
-  const results = await StorageManager.queryCachedTransfers(filters);
-  renderSearchResults(results);
+  renderBaseItems(filtered);
 }
 
 /**
- * Render search results
+ * Render scout base items in popup
  */
-function renderSearchResults(transfers) {
-  const container = document.getElementById('search-results');
+function renderBaseItems(players) {
+  const container = document.getElementById('base-items');
+  if (!container) return;
 
-  if (transfers.length === 0) {
+  if (players.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <circle cx="11" cy="11" r="8" />
-          <path d="m21 21-4.35-4.35" />
+          <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+          <path d="M3 5v14a9 3 0 0 0 18 0V5"></path>
+          <path d="M3 12a9 3 0 0 0 18 0"></path>
         </svg>
-        <p>Sonuç bulunamadı</p>
-        <span>Filtreleri değiştirerek tekrar deneyin.</span>
+        <p>Oyuncu Bulunmadı</p>
+        <span>Filtrelerinizi değiştirin veya sitenin içinden oyuncu ekleyin.</span>
       </div>
     `;
     return;
   }
 
-  // Limit to first 50 results
-  const displayTransfers = transfers.slice(0, 50);
-
-  container.innerHTML = `
-    <div class="results-count">${transfers.length} sonuç bulundu ${transfers.length > 50 ? '(ilk 50 gösteriliyor)' : ''}</div>
-    <div class="search-results-list">
-      ${displayTransfers.map(t => `
-        <div class="result-item" data-player-id="${t.id}">
-          <div class="result-info">
-            <span class="result-name">${t.name || 'İsimsiz'}</span>
-            <span class="result-details">
-              ${t.position || ''} ${t.age ? `• ${t.age} yaş` : ''} ${t.nationality ? `• ${t.nationality}` : ''}
-            </span>
-          </div>
-          <div class="result-actions">
-            <a href="${t.profileUrl}" target="_blank" class="btn-icon" title="Profile Git">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                <polyline points="15 3 21 3 21 9"/>
-                <line x1="10" y1="14" x2="21" y2="3"/>
-              </svg>
-            </a>
-          </div>
-        </div>
-      `).join('')}
+  container.innerHTML = players.map(player => `
+    <div class="watchlist-item" data-player-id="${player.id}">
+      <div class="player-avatar">
+        ${player.imageUrl
+      ? `<img src="${player.imageUrl}" alt="${player.name}">`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>`
+        }
+      </div>
+      <div class="player-info">
+        <span class="player-name">${player.name}</span>
+        <span class="player-details">${player.position || ''} • ${player.age || '?'} yaş • ${player.club || ''}</span>
+        <span class="player-details" style="display: block; color: var(--accent); margin-top: 2px;">MV: ${player.marketValue || '-'}</span>
+      </div>
+      <div class="player-actions">
+        <button class="btn-icon open-profile" title="Profile Git" data-url="${player.profileUrl}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+            <polyline points="15 3 21 3 21 9"/>
+            <line x1="10" y1="14" x2="21" y2="3"/>
+          </svg>
+        </button>
+        <button class="btn-icon remove-player-base" title="Base'den Kaldır" data-player-id="${player.id}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
     </div>
-  `;
+  `).join('');
+
+  // Add event listeners
+  container.querySelectorAll('.open-profile').forEach(btn => {
+    btn.addEventListener('click', () => {
+      chrome.tabs.create({ url: btn.dataset.url });
+    });
+  });
+
+  container.querySelectorAll('.remove-player-base').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await StorageManager.removeFromScoutBase(btn.dataset.playerId);
+      await loadScoutBase();
+      
+      // Update page base buttons if any tab is active
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && tab.url.includes('transfermarkt')) {
+        chrome.tabs.sendMessage(tab.id, { action: 'settingsChanged' });
+      }
+    });
+  });
 }
 
 /**
@@ -425,41 +492,28 @@ function setupEventListeners() {
     });
   });
 
-  // Global Search event listeners
-  document.getElementById('search-apply')?.addEventListener('click', performSearch);
-
-  // Sync Data Button
-  document.getElementById('sync-data-btn')?.addEventListener('click', async () => {
-    const btn = document.getElementById('sync-data-btn');
-    btn.classList.add('loading');
-    btn.style.opacity = '0.5';
-
-    chrome.runtime.sendMessage({ action: 'syncTransfers' }, async (response) => {
-      btn.classList.remove('loading');
-      btn.style.opacity = '1';
-
-      if (response && response.success) {
-        alert(`${response.count} yeni transfer cache'e eklendi!`);
-        await loadSearchPanel();
-      } else {
-        alert(response?.message || 'Senkronizasyon başarısız. Lütfen bir Transfermarkt sekmesinin açık olduğundan emin olun.');
-      }
-    });
+  // Scout Base event listeners
+  document.getElementById('base-apply')?.addEventListener('click', performBaseFilter);
+  document.getElementById('base-search')?.addEventListener('input', debounce(async () => {
+    await performBaseFilter();
+  }, 300));
+  
+  document.getElementById('base-reset')?.addEventListener('click', async () => {
+    document.getElementById('base-position').value = '';
+    document.getElementById('base-nationality').value = '';
+    document.getElementById('base-age-min').value = '';
+    document.getElementById('base-age-max').value = '';
+    document.getElementById('base-sort').value = '';
+    document.getElementById('base-search').value = '';
+    await performBaseFilter();
   });
 
-  document.getElementById('search-reset')?.addEventListener('click', async () => {
-    document.getElementById('search-position').value = '';
-    document.getElementById('search-nationality').value = '';
-    document.getElementById('search-age-min').value = '';
-    document.getElementById('search-age-max').value = '';
-    document.getElementById('search-sort').value = '';
-    await performSearch();
-  });
-
-  document.getElementById('clear-cache')?.addEventListener('click', async () => {
-    if (confirm('Tüm önbelleğe alınmış transferler silinecek. Emin misiniz?')) {
-      await StorageManager.clearTransferCache();
-      await loadSearchPanel();
+  document.getElementById('export-base-csv')?.addEventListener('click', async () => {
+    try {
+      await ExportManager.exportScoutBaseCSV();
+    } catch (e) {
+      console.error(e);
+      alert('Dışa aktarma hatası: ' + e.message);
     }
   });
 
