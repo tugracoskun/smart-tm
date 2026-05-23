@@ -1,0 +1,121 @@
+/* Smart-TM SofaScore Entegrasyonu */
+
+/* Ana Buton Konteyner */
+.smarttm-sofa-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    margin-right: 8px;
+    z-index: 100;
+}
+
+/* Ana Trigger Butonu */
+.smarttm-sofa-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: #7A84FF;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: filter 0.2s ease;
+    box-shadow: none;
+}
+
+.smarttm-sofa-btn:hover {
+    filter: brightness(1.1);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.smarttm-sofa-btn svg {
+    width: 24px;
+    height: 24px;
+    color: #171C1F;
+}
+
+/* Aksiyon Menüsü (Pop-out) */
+.smarttm-sofa-actions {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    width: 220px;
+    background: #171C1F;
+    border: 1px solid rgba(122, 132, 255, 0.15);
+    border-radius: 12px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px) scale(0.98);
+    transform-origin: top right;
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+}
+
+.smarttm-sofa-wrapper.active .smarttm-sofa-actions {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+}
+
+/* Menü Öğeleri */
+.smarttm-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    width: 100%;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.smarttm-action-btn:hover {
+    background: rgba(122, 132, 255, 0.1);
+    /* #7A84FF with opacity */
+    color: #7A84FF;
+    padding-left: 20px;
+    /* Slight movement animation */
+}
+
+.smarttm-action-btn svg,
+.smarttm-action-btn img {
+    width: 18px;
+    height: 18px;
+    transition: transform 0.2s;
+}
+
+.smarttm-action-btn:hover svg,
+.smarttm-action-btn:hover img {
+    transform: scale(1.1);
+}
+
+/* Renkler */
+.smarttm-tm-link {
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    color: #7A84FF;
+}
+
+.smarttm-fav-btn {
+    color: #EFAB14;
+}
+
+.smarttm-fav-btn.added svg {
+    fill: #EFAB14;
+}
