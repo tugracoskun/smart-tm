@@ -688,8 +688,8 @@
         </button>
       </div>
       <div class="smarttm-filter-body">
-        <div class="smarttm-filter-row">
-          <div class="smarttm-filter-group">
+        <div class="smarttm-filter-grid">
+          <div class="smarttm-filter-group col-3">
             <label>Yaş Aralığı</label>
             <div class="smarttm-filter-range">
               <input type="number" id="smarttm-age-min" placeholder="Min" min="15" max="45">
@@ -697,7 +697,7 @@
               <input type="number" id="smarttm-age-max" placeholder="Max" min="15" max="45">
             </div>
           </div>
-          <div class="smarttm-filter-group">
+          <div class="smarttm-filter-group col-3">
             <label>Piyasa Değeri</label>
             <div class="smarttm-filter-range">
               <input type="text" id="smarttm-value-min" placeholder="Min (€)">
@@ -705,31 +705,38 @@
               <input type="text" id="smarttm-value-max" placeholder="Max (€)">
             </div>
           </div>
-          <div class="smarttm-filter-group">
+          <div class="smarttm-filter-group col-3">
             <label>Pozisyon</label>
             <select id="smarttm-position" class="smarttm-select">
               <option value="">Tümü</option>
               ${positionOptions}
             </select>
           </div>
-        </div>
-        <div class="smarttm-filter-row">
-          <div class="smarttm-filter-group">
+          <div class="smarttm-filter-group col-3">
             <label>Milliyet</label>
             <select id="smarttm-nationality" class="smarttm-select">
               <option value="">Tümü</option>
               ${nationalityOptions}
             </select>
           </div>
-          <div class="smarttm-filter-group">
+          <div class="smarttm-filter-group col-6">
             <label>Transfer Tipi</label>
-            <div class="smarttm-filter-checkboxes">
-              <label><input type="checkbox" id="smarttm-type-loan" checked> Kiralık</label>
-              <label><input type="checkbox" id="smarttm-type-permanent" checked> Bonservisli</label>
-              <label><input type="checkbox" id="smarttm-type-free" checked> Bedelsiz</label>
+            <div class="smarttm-filter-chips">
+              <label class="smarttm-chip-label loan">
+                <input type="checkbox" id="smarttm-type-loan" checked>
+                <span>Kiralık</span>
+              </label>
+              <label class="smarttm-chip-label permanent">
+                <input type="checkbox" id="smarttm-type-permanent" checked>
+                <span>Bonservisli</span>
+              </label>
+              <label class="smarttm-chip-label free">
+                <input type="checkbox" id="smarttm-type-free" checked>
+                <span>Bedelsiz</span>
+              </label>
             </div>
           </div>
-          <div class="smarttm-filter-group">
+          <div class="smarttm-filter-group col-6">
             <label>Hızlı Filtreler</label>
             <div class="smarttm-quick-filters">
               <button class="smarttm-quick-btn" data-filter="young">U21</button>
